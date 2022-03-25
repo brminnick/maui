@@ -12,7 +12,7 @@ using Windows.UI.Xaml;
 using Windows.UI.Xaml.Media.Imaging;
 #endif
 
-namespace Microsoft.Maui.Essentials
+namespace Microsoft.Maui.Media
 {
 	public static partial class Screenshot
 	{
@@ -25,15 +25,22 @@ namespace Microsoft.Maui.Essentials
 
 		public static async Task<byte[]> RenderAsJPEGAsync(this FrameworkElement element)
 		{
-			var memoryStream = new InMemoryRandomAccessStream();
+			using var memoryStream = new InMemoryRandomAccessStream();
 			BitmapEncoder enc = await BitmapEncoder.CreateAsync(BitmapEncoder.JpegEncoderId, memoryStream);
 			return await element.RenderAsImageAsync(enc, memoryStream);
 		}
 
 		public static async Task<byte[]> RenderAsPNGAsync(this FrameworkElement element)
 		{
-			var memoryStream = new InMemoryRandomAccessStream();
+			using var memoryStream = new InMemoryRandomAccessStream();
 			BitmapEncoder enc = await BitmapEncoder.CreateAsync(BitmapEncoder.PngEncoderId, memoryStream);
+			return await element.RenderAsImageAsync(enc, memoryStream);
+		}
+
+		public static async Task<byte[]> RenderAsBMPAsync(this FrameworkElement element)
+		{
+			using var memoryStream = new InMemoryRandomAccessStream();
+			BitmapEncoder enc = await BitmapEncoder.CreateAsync(BitmapEncoder.BmpEncoderId, memoryStream);
 			return await element.RenderAsImageAsync(enc, memoryStream);
 		}
 
@@ -62,9 +69,9 @@ namespace Microsoft.Maui.Essentials
 	}
 }
 
-namespace Microsoft.Maui.Essentials.Implementations
+namespace Microsoft.Maui.Media
 {
-	internal partial class ScreenshotImplementation : IScreenshot
+	public partial class ScreenshotImplementation : IScreenshot
 	{
 		public bool IsCaptureSupported =>
 			true;

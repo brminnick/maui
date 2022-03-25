@@ -8,7 +8,7 @@ using Windows.UI.Core;
 using Microsoft.UI.Dispatching;
 #endif
 
-namespace Microsoft.Maui.Essentials
+namespace Microsoft.Maui.ApplicationModel
 {
 	public static partial class MainThread
 	{
@@ -33,7 +33,7 @@ namespace Microsoft.Maui.Essentials
 
 				return CoreApplication.MainView.CoreWindow.Dispatcher?.HasThreadAccess ?? false;
 #elif WINDOWS
-				return DispatcherQueue.GetForCurrentThread()?.HasThreadAccess ?? false;
+				return Platform.CurrentWindow?.DispatcherQueue?.HasThreadAccess ?? true;
 #endif
 			}
 		}
@@ -47,7 +47,7 @@ namespace Microsoft.Maui.Essentials
 				throw new InvalidOperationException("Unable to find main thread.");
 			dispatcher.RunAsync(CoreDispatcherPriority.Normal, () => action()).WatchForError();
 #elif WINDOWS
-			var dispatcher = DispatcherQueue.GetForCurrentThread();
+			var dispatcher = Platform.CurrentWindow.DispatcherQueue;
 
 			if (dispatcher == null)
 				throw new InvalidOperationException("Unable to find main thread.");

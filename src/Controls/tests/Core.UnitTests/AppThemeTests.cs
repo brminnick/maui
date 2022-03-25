@@ -1,5 +1,6 @@
 using System;
-using Microsoft.Maui.Essentials;
+using Microsoft.Maui.Devices;
+using Microsoft.Maui.ApplicationModel;
 using Microsoft.Maui.Graphics;
 using NUnit.Framework;
 
@@ -51,7 +52,7 @@ namespace Microsoft.Maui.Controls.Core.UnitTests
 				Text = "Green on Light, Red on Dark"
 			};
 
-			label.SetOnAppTheme(Label.TextColorProperty, Colors.Green, Colors.Red);
+			label.SetAppTheme(Label.TextColorProperty, Colors.Green, Colors.Red);
 			Assert.AreEqual(Colors.Green, label.TextColor);
 
 			SetAppTheme(AppTheme.Dark);

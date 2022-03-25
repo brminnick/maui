@@ -1,12 +1,13 @@
 #nullable enable
 using System;
 using System.Runtime.InteropServices;
+using Microsoft.Maui.ApplicationModel;
 using Microsoft.UI.Windowing;
 using Windows.Graphics.Display;
 using Windows.Graphics.Display.Core;
 using Windows.System.Display;
 
-namespace Microsoft.Maui.Essentials.Implementations
+namespace Microsoft.Maui.Devices
 {
 	public class DeviceDisplayImplementation : IDeviceDisplay
 	{
@@ -108,7 +109,7 @@ namespace Microsoft.Maui.Essentials.Implementations
 
 			var w = vDevMode.dmPelsWidth;
 			var h = vDevMode.dmPelsHeight;
-			var dpi = GetDpiForWindow(windowHandler) / 96.0;
+			var dpi = GetDpiForWindow(windowHandler) / DeviceDisplay.BaseLogicalDpi;
 
 			return new DisplayInfo(
 				width: perpendicular ? h : w,
@@ -360,7 +361,7 @@ namespace Microsoft.Maui.Essentials.Implementations
 			return new DisplayInfo(
 				width: perpendicular ? h : w,
 				height: perpendicular ? w : h,
-				density: di.LogicalDpi / 96.0,
+				density: di.LogicalDpi / DeviceDisplay.BaseLogicalDpi,
 				orientation: CalculateOrientation(di),
 				rotation: rotation,
 				rate: (float)(hdm?.RefreshRate ?? 0));
