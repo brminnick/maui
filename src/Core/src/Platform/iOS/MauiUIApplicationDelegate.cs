@@ -16,7 +16,7 @@ namespace Microsoft.Maui
 		IMauiContext _applicationContext = null!;
 
 		protected MauiUIApplicationDelegate() : base()
-		{	
+		{
 			Current = this;
 			IPlatformApplication.Current = this;
 		}
@@ -65,6 +65,8 @@ namespace Microsoft.Maui
 		}
 
 		[Export("application:configurationForConnectingSceneSession:options:")]
+		[System.Runtime.Versioning.SupportedOSPlatform("ios13.1")]
+		[System.Runtime.Versioning.SupportedOSPlatform("tvos13.1")]
 		public virtual UISceneConfiguration GetConfiguration(UIApplication application, UISceneSession connectingSceneSession, UISceneConnectionOptions options)
 			=> new(MauiUIApplicationDelegate.MauiSceneConfigurationKey, connectingSceneSession.Role);
 
@@ -110,6 +112,12 @@ namespace Microsoft.Maui
 		public virtual void OnResignActivation(UIApplication application)
 		{
 			Services?.InvokeLifecycleEvents<iOSLifecycle.OnResignActivation>(del => del(application));
+		}
+
+		[Export("sceneDidDisconnect:")]
+		public void DidDisconnect(UIScene scene)
+		{
+			Services?.InvokeLifecycleEvents<iOSLifecycle.SceneDidDisconnect>(del => del(scene));
 		}
 
 		[Export("applicationWillTerminate:")]

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Maui.Controls;
+using Microsoft.Maui.DeviceTests.Stubs;
 using Microsoft.Maui.Handlers;
 using Microsoft.Maui.Hosting;
 using Xunit;
@@ -17,6 +18,9 @@ using TabbedViewHandler = Microsoft.Maui.Controls.Handlers.Compatibility.TabbedR
 namespace Microsoft.Maui.DeviceTests
 {
 	[Category(TestCategory.Modal)]
+#if ANDROID || IOS
+	[Collection(HandlerTestBase.RunInNewWindowCollection)]
+#endif
 	public partial class ModalTests : HandlerTestBase
 	{
 		void SetupBuilder()

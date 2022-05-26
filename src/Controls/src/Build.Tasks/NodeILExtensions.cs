@@ -31,16 +31,6 @@ namespace Microsoft.Maui.Controls.Build.Tasks
 				}
 			}
 
-			if (typeConverter == null)
-				foreach (var (t, tc) in TypeConversionExtensions.KnownConverters)
-				{
-					if (TypeRefComparer.Default.Equals(context.Module.ImportReference(t), targetTypeRef))
-					{
-						typeConverter = context.Module.ImportReference(tc);
-						break;
-					}
-				}
-
 			return node.CanConvertValue(context, targetTypeRef, typeConverter);
 		}
 
@@ -124,16 +114,6 @@ namespace Microsoft.Maui.Controls.Build.Tasks
 				}
 			}
 
-			if (typeConverter == null)
-				foreach (var (t, tc) in TypeConversionExtensions.KnownConverters)
-				{
-					if (TypeRefComparer.Default.Equals(context.Module.ImportReference(t), targetTypeRef))
-					{
-						typeConverter = context.Module.ImportReference(tc);
-						break;
-					}
-				}
-
 			return node.PushConvertedValue(context, targetTypeRef, typeConverter, pushServiceProvider, boxValueTypes,
 				unboxValueTypes);
 		}
@@ -175,14 +155,24 @@ namespace Microsoft.Maui.Controls.Build.Tasks
 					{ module.ImportReference(("Microsoft.Maui", "Microsoft.Maui.Converters", "ThicknessTypeConverter")), typeof(ThicknessTypeConverter) },
 					{ module.ImportReference(("Microsoft.Maui", "Microsoft.Maui.Converters", "CornerRadiusTypeConverter")), typeof(CornerRadiusTypeConverter) },
 					{ module.ImportReference(("Microsoft.Maui", "Microsoft.Maui.Converters", "EasingTypeConverter")), typeof(EasingTypeConverter) },
-					{ module.ImportReference(("Microsoft.Maui.Graphics", "Microsoft.Maui.Graphics.Converters", "ColorTypeConverter")), typeof(ColorTypeConverter) }
+					{ module.ImportReference(("Microsoft.Maui.Graphics", "Microsoft.Maui.Graphics.Converters", "ColorTypeConverter")), typeof(ColorTypeConverter) },
+					{ module.ImportReference(("Microsoft.Maui", "Microsoft.Maui.Converters", "FlexJustifyTypeConverter")), typeof(EnumTypeConverter<Layouts.FlexJustify>) },
+					{ module.ImportReference(("Microsoft.Maui", "Microsoft.Maui.Converters", "FlexDirectionTypeConverter")), typeof(EnumTypeConverter<Layouts.FlexDirection>) },
+					{ module.ImportReference(("Microsoft.Maui", "Microsoft.Maui.Converters", "FlexAlignContentTypeConverter")), typeof(EnumTypeConverter<Layouts.FlexAlignContent>) },
+					{ module.ImportReference(("Microsoft.Maui", "Microsoft.Maui.Converters", "FlexAlignItemsTypeConverter")), typeof(EnumTypeConverter<Layouts.FlexAlignItems>) },
+					{ module.ImportReference(("Microsoft.Maui", "Microsoft.Maui.Converters", "FlexAlignSelfTypeConverter")), typeof(EnumTypeConverter<Layouts.FlexAlignSelf>) },
+					{ module.ImportReference(("Microsoft.Maui", "Microsoft.Maui.Converters", "FlexWrapTypeConverter")), typeof(EnumTypeConverter<Layouts.FlexWrap>) },
+					{ module.ImportReference(("Microsoft.Maui", "Microsoft.Maui.Converters", "FlexBasisTypeConverter")), typeof(FlexBasisTypeConverter) },
+					{ module.ImportReference(("Microsoft.Maui", "Microsoft.Maui.Converters", "FlowDirectionTypeConverter")), typeof(EnumTypeConverter<FlowDirection>) },
+
 				};
 			}
 
 			var str = (string)node.Value;
 			//If the TypeConverter has a ProvideCompiledAttribute that can be resolved, shortcut this
 			Type compiledConverterType;
-			if (typeConverter?.GetCustomAttribute(module, ("Microsoft.Maui.Controls", "Microsoft.Maui.Controls.Xaml", "ProvideCompiledAttribute"))?.ConstructorArguments?.First().Value is string compiledConverterName && (compiledConverterType = Type.GetType(compiledConverterName)) != null
+			if (typeConverter?.GetCustomAttribute(module, ("Microsoft.Maui.Controls", "Microsoft.Maui.Controls.Xaml", "ProvideCompiledAttribute"))?.ConstructorArguments?.First().Value is string compiledConverterName
+				&& (compiledConverterType = Type.GetType(compiledConverterName)) != null
 				|| (typeConverter != null && KnownCompiledTypeConverters.TryGetValue(typeConverter, out compiledConverterType)))
 			{
 				var compiledConverter = Activator.CreateInstance(compiledConverterType);

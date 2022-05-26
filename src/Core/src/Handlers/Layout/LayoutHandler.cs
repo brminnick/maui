@@ -5,7 +5,9 @@ using PlatformView = Microsoft.Maui.Platform.LayoutView;
 using PlatformView = Microsoft.Maui.Platform.LayoutViewGroup;
 #elif WINDOWS
 using PlatformView = Microsoft.Maui.Platform.LayoutPanel;
-#elif NETSTANDARD
+#elif TIZEN
+using PlatformView = Microsoft.Maui.Platform.LayoutCanvas;
+#elif (NETSTANDARD || !PLATFORM)
 using PlatformView = System.Object;
 #endif
 
@@ -48,6 +50,10 @@ namespace Microsoft.Maui.Handlers
 
 		public static void MapBackground(ILayoutHandler handler, ILayout layout)
 		{
+#if TIZEN
+			handler.UpdateValue(nameof(handler.ContainerView));
+			handler.ToPlatform()?.UpdateBackground(layout);
+#endif
 			((PlatformView?)handler.PlatformView)?.UpdateBackground(layout);
 		}
 
@@ -106,7 +112,7 @@ namespace Microsoft.Maui.Handlers
 		/// </summary>
 		/// <param name="flowDirection"></param>
 		/// <returns>The FlowDirection to assume for cross-platform layout</returns>
-		internal static FlowDirection GetLayoutFlowDirection(FlowDirection flowDirection) 
+		internal static FlowDirection GetLayoutFlowDirection(FlowDirection flowDirection)
 		{
 #if WINDOWS
 			// The native LayoutPanel in Windows will automagically flip our layout coordinates if it's in RTL mode.

@@ -110,8 +110,15 @@ namespace Microsoft.Maui.DeviceTests
 		[Theory]
 		[InlineData(true)]
 		[InlineData(false)]
-		public async Task InputTransparencyInitializesCorrectly(bool inputTransparent) 
+		public async Task InputTransparencyInitializesCorrectly(bool inputTransparent)
 		{
+			if (typeof(TStub) == typeof(LayoutStub))
+			{
+				// The platform type for Layouts (LayoutView) always has UserInteractionEnabled
+				// to allow for its children to be interacted with
+				return;
+			}
+
 			var view = new TStub()
 			{
 				InputTransparent = inputTransparent
@@ -211,7 +218,7 @@ namespace Microsoft.Maui.DeviceTests
 			return Visibility.Visible;
 		}
 
-		protected bool GetUserInteractionEnabled(IViewHandler viewHandler) 
+		protected bool GetUserInteractionEnabled(IViewHandler viewHandler)
 		{
 			var platformView = (UIView)viewHandler.PlatformView;
 			return platformView.UserInteractionEnabled;
