@@ -332,6 +332,7 @@ namespace Microsoft.Maui.Controls
 		IFlowDirectionController FlowController => this;
 
 		/// <include file="../../docs/Microsoft.Maui.Controls/VisualElement.xml" path="//Member[@MemberName='FlowDirection']/Docs" />
+		[System.ComponentModel.TypeConverter(typeof(FlowDirectionConverter))]
 		public FlowDirection FlowDirection
 		{
 			get { return (FlowDirection)GetValue(FlowDirectionProperty); }
@@ -897,7 +898,9 @@ namespace Microsoft.Maui.Controls
 		protected override void OnChildAdded(Element child)
 		{
 			base.OnChildAdded(child);
+
 			var view = child as View;
+
 			if (view != null)
 				ComputeConstraintForView(view);
 		}
@@ -905,6 +908,7 @@ namespace Microsoft.Maui.Controls
 		protected override void OnChildRemoved(Element child, int oldLogicalIndex)
 		{
 			base.OnChildRemoved(child, oldLogicalIndex);
+
 			if (child is View view)
 				view.ComputedConstraint = LayoutConstraint.None;
 		}
@@ -1003,7 +1007,7 @@ namespace Microsoft.Maui.Controls
 
 		internal void MockBounds(Rect bounds)
 		{
-#if NETSTANDARD2_0 || NET6_0
+#if NETSTANDARD2_0 || NET6_0_OR_GREATER
 			(_mockX, _mockY, _mockWidth, _mockHeight) = bounds;
 #else
 			_mockX = bounds.X;

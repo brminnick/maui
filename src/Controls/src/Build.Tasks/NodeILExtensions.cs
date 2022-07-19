@@ -156,6 +156,7 @@ namespace Microsoft.Maui.Controls.Build.Tasks
 					{ module.ImportReference(("Microsoft.Maui", "Microsoft.Maui.Converters", "CornerRadiusTypeConverter")), typeof(CornerRadiusTypeConverter) },
 					{ module.ImportReference(("Microsoft.Maui", "Microsoft.Maui.Converters", "EasingTypeConverter")), typeof(EasingTypeConverter) },
 					{ module.ImportReference(("Microsoft.Maui.Graphics", "Microsoft.Maui.Graphics.Converters", "ColorTypeConverter")), typeof(ColorTypeConverter) },
+					{ module.ImportReference(("Microsoft.Maui.Graphics", "Microsoft.Maui.Graphics.Converters", "PointTypeConverter")), typeof(PointTypeConverter) },
 					{ module.ImportReference(("Microsoft.Maui", "Microsoft.Maui.Converters", "FlexJustifyTypeConverter")), typeof(EnumTypeConverter<Layouts.FlexJustify>) },
 					{ module.ImportReference(("Microsoft.Maui", "Microsoft.Maui.Converters", "FlexDirectionTypeConverter")), typeof(EnumTypeConverter<Layouts.FlexDirection>) },
 					{ module.ImportReference(("Microsoft.Maui", "Microsoft.Maui.Converters", "FlexAlignContentTypeConverter")), typeof(EnumTypeConverter<Layouts.FlexAlignContent>) },
@@ -163,7 +164,6 @@ namespace Microsoft.Maui.Controls.Build.Tasks
 					{ module.ImportReference(("Microsoft.Maui", "Microsoft.Maui.Converters", "FlexAlignSelfTypeConverter")), typeof(EnumTypeConverter<Layouts.FlexAlignSelf>) },
 					{ module.ImportReference(("Microsoft.Maui", "Microsoft.Maui.Converters", "FlexWrapTypeConverter")), typeof(EnumTypeConverter<Layouts.FlexWrap>) },
 					{ module.ImportReference(("Microsoft.Maui", "Microsoft.Maui.Converters", "FlexBasisTypeConverter")), typeof(FlexBasisTypeConverter) },
-					{ module.ImportReference(("Microsoft.Maui", "Microsoft.Maui.Converters", "FlowDirectionTypeConverter")), typeof(EnumTypeConverter<FlowDirection>) },
 
 				};
 			}
