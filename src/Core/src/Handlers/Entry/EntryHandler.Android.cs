@@ -1,24 +1,20 @@
 ﻿using System;
-using Android.Content.Res;
 using Android.Graphics.Drawables;
-using Android.Runtime;
 using Android.Text;
 using Android.Views;
-using Android.Views.InputMethods;
-using Android.Widget;
 using AndroidX.AppCompat.Widget;
 using AndroidX.Core.Content;
-using Microsoft.Maui.Platform;
 using static Android.Views.View;
 using static Android.Widget.TextView;
 
 namespace Microsoft.Maui.Handlers
 {
-	// TODO: NET7 issoto - Change the TPlatformView generic type to MauiAppCompatEditText
+	// TODO: NET8 issoto - Change the TPlatformView generic type to MauiAppCompatEditText
 	// This type adds support to the SelectionChanged event
 	public partial class EntryHandler : ViewHandler<IEntry, AppCompatEditText>
 	{
 		Drawable? _clearButtonDrawable;
+		bool _clearButtonVisible;
 		bool _set;
 
 		protected override AppCompatEditText CreatePlatformView()
@@ -35,14 +31,14 @@ namespace Microsoft.Maui.Handlers
 		{
 			base.SetVirtualView(view);
 
-			// TODO: NET7 issoto - Remove the casting once we can set the TPlatformView generic type as MauiAppCompatEditText
+			// TODO: NET8 issoto - Remove the casting once we can set the TPlatformView generic type as MauiAppCompatEditText
 			if (!_set && PlatformView is MauiAppCompatEditText editText)
 				editText.SelectionChanged += OnSelectionChanged;
 
 			_set = true;
 		}
 
-		// TODO: NET7 issoto - Change the return type to MauiAppCompatEditText
+		// TODO: NET8 issoto - Change the return type to MauiAppCompatEditText
 		protected override void ConnectHandler(AppCompatEditText platformView)
 		{
 			platformView.TextChanged += OnTextChanged;
@@ -51,16 +47,17 @@ namespace Microsoft.Maui.Handlers
 			platformView.EditorAction += OnEditorAction;
 		}
 
-		// TODO: NET7 issoto - Change the return type to MauiAppCompatEditText
+		// TODO: NET8 issoto - Change the return type to MauiAppCompatEditText
 		protected override void DisconnectHandler(AppCompatEditText platformView)
 		{
 			_clearButtonDrawable = null;
+
 			platformView.TextChanged -= OnTextChanged;
 			platformView.FocusChange -= OnFocusedChange;
 			platformView.Touch -= OnTouch;
 			platformView.EditorAction -= OnEditorAction;
 
-			// TODO: NET7 issoto - Remove the casting once we can set the TPlatformView generic type as MauiAppCompatEditText
+			// TODO: NET8 issoto - Remove the casting once we can set the TPlatformView generic type as MauiAppCompatEditText
 			if (_set && platformView is MauiAppCompatEditText editText)
 				editText.SelectionChanged -= OnSelectionChanged;
 
@@ -127,44 +124,105 @@ namespace Microsoft.Maui.Handlers
 				handler.PlatformView?.UpdateClearButtonVisibility(entry, platformHandler.GetClearButtonDrawable);
 		}
 
-		void OnTextChanged(object? sender, TextChangedEventArgs e) =>
-			VirtualView?.UpdateText(e);
+		static void MapFocus(IEntryHandler handler, IEntry entry, object? args)
+		{
+			if (args is FocusRequest request)
+				handler.PlatformView.Focus(request);
+		}
 
-		// This will eliminate additional native property setting if not required.
+		void OnTextChanged(object? sender, TextChangedEventArgs e)
+		{
+			if (VirtualView == null)
+			{
+				return;
+			}
+
+			// Let the mapping know that the update is coming from changes to the platform control
+			DataFlowDirection = DataFlowDirection.FromPlatform;
+			VirtualView.UpdateText(e);
+
+			// Reset to the default direction
+			DataFlowDirection = DataFlowDirection.ToPlatform;
+
+			MapClearButtonVisibility(this, VirtualView);
+		}
+
 		void OnFocusedChange(object? sender, FocusChangeEventArgs e)
 		{
-			if (VirtualView?.ClearButtonVisibility == ClearButtonVisibility.WhileEditing)
-				UpdateValue(nameof(IEntry.ClearButtonVisibility));
+			if (VirtualView == null)
+			{
+				return;
+			}
+
+			MapClearButtonVisibility(this, VirtualView);
 		}
 
 		// Check whether the touched position inbounds with clear button.
 		void OnTouch(object? sender, TouchEventArgs e) =>
 			e.Handled =
-				VirtualView?.ClearButtonVisibility == ClearButtonVisibility.WhileEditing &&
-				PlatformView.HandleClearButtonTouched(VirtualView.FlowDirection, e, GetClearButtonDrawable);
+				_clearButtonVisible && VirtualView != null &&
+				PlatformView.HandleClearButtonTouched(e, GetClearButtonDrawable);
 
 		void OnEditorAction(object? sender, EditorActionEventArgs e)
 		{
-			if (e.IsCompletedAction())
-			{
-				// TODO: Dismiss keyboard for hardware / physical keyboards
+			var returnType = VirtualView?.ReturnType;
 
-				VirtualView?.Completed();
+			if (returnType != null)
+			{
+				var currentInputImeFlag = returnType.Value.ToPlatform();
+
+				if (e.IsCompletedAction(currentInputImeFlag))
+				{
+					VirtualView?.Completed();
+				}
 			}
 
-			e.Handled = true;
+			e.Handled = false;
 		}
 
 		private void OnSelectionChanged(object? sender, EventArgs e)
 		{
-			var cursorPostion = PlatformView.GetCursorPosition();
+			var cursorPosition = PlatformView.GetCursorPosition();
 			var selectedTextLength = PlatformView.GetSelectedTextLength();
 
-			if (VirtualView.CursorPosition != cursorPostion)
-				VirtualView.CursorPosition = cursorPostion;
+			if (VirtualView.CursorPosition != cursorPosition)
+				VirtualView.CursorPosition = cursorPosition;
 
 			if (VirtualView.SelectionLength != selectedTextLength)
 				VirtualView.SelectionLength = selectedTextLength;
+		}
+
+		internal void ShowClearButton()
+		{
+			if (_clearButtonVisible)
+			{
+				return;
+			}
+
+			var drawable = GetClearButtonDrawable();
+
+			if (VirtualView?.TextColor is not null)
+				drawable?.SetColorFilter(VirtualView.TextColor.ToPlatform(), FilterMode.SrcIn);
+			else
+				drawable?.ClearColorFilter();
+
+			if (PlatformView.LayoutDirection == LayoutDirection.Rtl)
+				PlatformView.SetCompoundDrawablesWithIntrinsicBounds(drawable, null, null, null);
+			else
+				PlatformView.SetCompoundDrawablesWithIntrinsicBounds(null, null, drawable, null);
+
+			_clearButtonVisible = true;
+		}
+
+		internal void HideClearButton()
+		{
+			if (!_clearButtonVisible)
+			{
+				return;
+			}
+
+			PlatformView.SetCompoundDrawablesWithIntrinsicBounds(null, null, null, null);
+			_clearButtonVisible = false;
 		}
 	}
 }

@@ -20,6 +20,7 @@ namespace Microsoft.Maui.Platform
 
 			if (platformControl is MauiPasswordTextBox passwordTextBox && passwordTextBox.Password == newText)
 				return;
+
 			if (platformControl.Text == newText)
 				return;
 
@@ -210,7 +211,7 @@ namespace Microsoft.Maui.Platform
 				textBox.SelectionLength = entry.SelectionLength;
 		}
 
-		// TODO: NET7 issoto - Revisit this, marking this method as `internal` to avoid breaking public API changes
+		// TODO: NET8 issoto - Revisit this, marking this method as `internal` to avoid breaking public API changes
 		internal static int GetCursorPosition(this TextBox textBox, int cursorOffset = 0)
 		{
 			var newCursorPosition = textBox.SelectionStart + cursorOffset;

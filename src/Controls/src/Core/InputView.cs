@@ -1,45 +1,46 @@
+#nullable disable
 using System;
 using Microsoft.Maui.Controls.Internals;
 using Microsoft.Maui.Graphics;
 
 namespace Microsoft.Maui.Controls
 {
-	/// <include file="../../docs/Microsoft.Maui.Controls/InputView.xml" path="Type[@FullName='Microsoft.Maui.Controls.InputView']/Docs" />
+	/// <include file="../../docs/Microsoft.Maui.Controls/InputView.xml" path="Type[@FullName='Microsoft.Maui.Controls.InputView']/Docs/*" />
 	public class InputView : View, IPlaceholderElement, ITextElement
 	{
-		/// <include file="../../docs/Microsoft.Maui.Controls/InputView.xml" path="//Member[@MemberName='TextProperty']/Docs" />
+		/// <summary>Bindable property for <see cref="Text"/>.</summary>
 		public static readonly BindableProperty TextProperty = BindableProperty.Create(nameof(Text), typeof(string), typeof(InputView), defaultBindingMode: BindingMode.TwoWay,
 			propertyChanged: (bindable, oldValue, newValue) => ((InputView)bindable).OnTextChanged((string)oldValue, (string)newValue));
 
-		/// <include file="../../docs/Microsoft.Maui.Controls/InputView.xml" path="//Member[@MemberName='KeyboardProperty']/Docs" />
+		/// <summary>Bindable property for <see cref="Keyboard"/>.</summary>
 		public static readonly BindableProperty KeyboardProperty = BindableProperty.Create(nameof(Keyboard), typeof(Keyboard), typeof(InputView), Keyboard.Default,
 			coerceValue: (o, v) => (Keyboard)v ?? Keyboard.Default);
 
-		/// <include file="../../docs/Microsoft.Maui.Controls/InputView.xml" path="//Member[@MemberName='IsSpellCheckEnabledProperty']/Docs" />
+		/// <summary>Bindable property for <see cref="IsSpellCheckEnabled"/>.</summary>
 		public static readonly BindableProperty IsSpellCheckEnabledProperty = BindableProperty.Create(nameof(IsSpellCheckEnabled), typeof(bool), typeof(InputView), true);
 
-		/// <include file="../../docs/Microsoft.Maui.Controls/InputView.xml" path="//Member[@MemberName='MaxLengthProperty']/Docs" />
+		/// <summary>Bindable property for <see cref="MaxLength"/>.</summary>
 		public static readonly BindableProperty MaxLengthProperty = BindableProperty.Create(nameof(MaxLength), typeof(int), typeof(int), int.MaxValue);
 
-		/// <include file="../../docs/Microsoft.Maui.Controls/InputView.xml" path="//Member[@MemberName='IsReadOnlyProperty']/Docs" />
+		/// <summary>Bindable property for <see cref="IsReadOnly"/>.</summary>
 		public static readonly BindableProperty IsReadOnlyProperty = BindableProperty.Create(nameof(IsReadOnly), typeof(bool), typeof(InputView), false);
 
-		/// <include file="../../docs/Microsoft.Maui.Controls/InputView.xml" path="//Member[@MemberName='PlaceholderProperty']/Docs" />
+		/// <summary>Bindable property for <see cref="Placeholder"/>.</summary>
 		public static readonly BindableProperty PlaceholderProperty = PlaceholderElement.PlaceholderProperty;
 
-		/// <include file="../../docs/Microsoft.Maui.Controls/InputView.xml" path="//Member[@MemberName='PlaceholderColorProperty']/Docs" />
+		/// <summary>Bindable property for <see cref="PlaceholderColor"/>.</summary>
 		public static readonly BindableProperty PlaceholderColorProperty = PlaceholderElement.PlaceholderColorProperty;
 
-		/// <include file="../../docs/Microsoft.Maui.Controls/InputView.xml" path="//Member[@MemberName='TextColorProperty']/Docs" />
+		/// <summary>Bindable property for <see cref="TextColor"/>.</summary>
 		public static readonly BindableProperty TextColorProperty = TextElement.TextColorProperty;
 
-		/// <include file="../../docs/Microsoft.Maui.Controls/InputView.xml" path="//Member[@MemberName='CharacterSpacingProperty']/Docs" />
+		/// <summary>Bindable property for <see cref="CharacterSpacing"/>.</summary>
 		public static readonly BindableProperty CharacterSpacingProperty = TextElement.CharacterSpacingProperty;
 
-		/// <include file="../../docs/Microsoft.Maui.Controls/InputView.xml" path="//Member[@MemberName='TextTransformProperty']/Docs" />
+		/// <summary>Bindable property for <see cref="TextTransform"/>.</summary>
 		public static readonly BindableProperty TextTransformProperty = TextElement.TextTransformProperty;
 
-		/// <include file="../../docs/Microsoft.Maui.Controls/InputView.xml" path="//Member[@MemberName='MaxLength']/Docs" />
+		/// <include file="../../docs/Microsoft.Maui.Controls/InputView.xml" path="//Member[@MemberName='MaxLength']/Docs/*" />
 		public int MaxLength
 		{
 			get => (int)GetValue(MaxLengthProperty);
@@ -50,14 +51,14 @@ namespace Microsoft.Maui.Controls
 		{
 		}
 
-		/// <include file="../../docs/Microsoft.Maui.Controls/InputView.xml" path="//Member[@MemberName='Text']/Docs" />
+		/// <include file="../../docs/Microsoft.Maui.Controls/InputView.xml" path="//Member[@MemberName='Text']/Docs/*" />
 		public string Text
 		{
 			get => (string)GetValue(TextProperty);
 			set => SetValue(TextProperty, value);
 		}
 
-		/// <include file="../../docs/Microsoft.Maui.Controls/InputView.xml" path="//Member[@MemberName='Keyboard']/Docs" />
+		/// <include file="../../docs/Microsoft.Maui.Controls/InputView.xml" path="//Member[@MemberName='Keyboard']/Docs/*" />
 		[System.ComponentModel.TypeConverter(typeof(Converters.KeyboardTypeConverter))]
 		public Keyboard Keyboard
 		{
@@ -65,49 +66,49 @@ namespace Microsoft.Maui.Controls
 			set => SetValue(KeyboardProperty, value);
 		}
 
-		/// <include file="../../docs/Microsoft.Maui.Controls/InputView.xml" path="//Member[@MemberName='IsSpellCheckEnabled']/Docs" />
+		/// <include file="../../docs/Microsoft.Maui.Controls/InputView.xml" path="//Member[@MemberName='IsSpellCheckEnabled']/Docs/*" />
 		public bool IsSpellCheckEnabled
 		{
 			get => (bool)GetValue(IsSpellCheckEnabledProperty);
 			set => SetValue(IsSpellCheckEnabledProperty, value);
 		}
 
-		/// <include file="../../docs/Microsoft.Maui.Controls/InputView.xml" path="//Member[@MemberName='IsReadOnly']/Docs" />
+		/// <include file="../../docs/Microsoft.Maui.Controls/InputView.xml" path="//Member[@MemberName='IsReadOnly']/Docs/*" />
 		public bool IsReadOnly
 		{
 			get => (bool)GetValue(IsReadOnlyProperty);
 			set => SetValue(IsReadOnlyProperty, value);
 		}
 
-		/// <include file="../../docs/Microsoft.Maui.Controls/InputView.xml" path="//Member[@MemberName='Placeholder']/Docs" />
+		/// <include file="../../docs/Microsoft.Maui.Controls/InputView.xml" path="//Member[@MemberName='Placeholder']/Docs/*" />
 		public string Placeholder
 		{
 			get => (string)GetValue(PlaceholderProperty);
 			set => SetValue(PlaceholderProperty, value);
 		}
 
-		/// <include file="../../docs/Microsoft.Maui.Controls/InputView.xml" path="//Member[@MemberName='PlaceholderColor']/Docs" />
+		/// <include file="../../docs/Microsoft.Maui.Controls/InputView.xml" path="//Member[@MemberName='PlaceholderColor']/Docs/*" />
 		public Color PlaceholderColor
 		{
 			get => (Color)GetValue(PlaceholderColorProperty);
 			set => SetValue(PlaceholderColorProperty, value);
 		}
 
-		/// <include file="../../docs/Microsoft.Maui.Controls/InputView.xml" path="//Member[@MemberName='TextColor']/Docs" />
+		/// <include file="../../docs/Microsoft.Maui.Controls/InputView.xml" path="//Member[@MemberName='TextColor']/Docs/*" />
 		public Color TextColor
 		{
 			get => (Color)GetValue(TextColorProperty);
 			set => SetValue(TextColorProperty, value);
 		}
 
-		/// <include file="../../docs/Microsoft.Maui.Controls/InputView.xml" path="//Member[@MemberName='CharacterSpacing']/Docs" />
+		/// <include file="../../docs/Microsoft.Maui.Controls/InputView.xml" path="//Member[@MemberName='CharacterSpacing']/Docs/*" />
 		public double CharacterSpacing
 		{
 			get => (double)GetValue(CharacterSpacingProperty);
 			set => SetValue(CharacterSpacingProperty, value);
 		}
 
-		/// <include file="../../docs/Microsoft.Maui.Controls/InputView.xml" path="//Member[@MemberName='TextTransform']/Docs" />
+		/// <include file="../../docs/Microsoft.Maui.Controls/InputView.xml" path="//Member[@MemberName='TextTransform']/Docs/*" />
 		public TextTransform TextTransform
 		{
 			get => (TextTransform)GetValue(TextTransformProperty);
@@ -130,13 +131,13 @@ namespace Microsoft.Maui.Controls
 			InvalidateMeasure();
 		}
 
-		/// <include file="../../docs/Microsoft.Maui.Controls/InputView.xml" path="//Member[@MemberName='OnTextTransformChanged']/Docs" />
+		/// <include file="../../docs/Microsoft.Maui.Controls/InputView.xml" path="//Member[@MemberName='OnTextTransformChanged']/Docs/*" />
 		public void OnTextTransformChanged(TextTransform oldValue, TextTransform newValue)
 		{
 			InvalidateMeasureInternal(InvalidationTrigger.MeasureChanged);
 		}
 
-		/// <include file="../../docs/Microsoft.Maui.Controls/InputView.xml" path="//Member[@MemberName='UpdateFormsText']/Docs" />
+		/// <include file="../../docs/Microsoft.Maui.Controls/InputView.xml" path="//Member[@MemberName='UpdateFormsText']/Docs/*" />
 		public string UpdateFormsText(string original, TextTransform transform)
 		{
 			return TextTransformUtilites.GetTransformedText(original, transform);

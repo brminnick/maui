@@ -8,7 +8,6 @@ namespace Microsoft.Maui.Platform
 	{
 		public MauiTextView(Context context) : base(context)
 		{
-
 		}
 
 		internal event EventHandler<LayoutChangedEventArgs>? LayoutChanged;

@@ -7,21 +7,29 @@ using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Maui
 {
+	/// <inheritdoc cref="IFontRegistrar"/>
 	public partial class FontRegistrar : IFontRegistrar
 	{
-		readonly Dictionary<string, (string Filename, string? Alias, Assembly Assembly)> _embeddedFonts = new();
-		readonly Dictionary<string, (string Filename, string? Alias)> _nativeFonts = new();
-		readonly Dictionary<string, string?> _fontLookupCache = new();
+		readonly Dictionary<string, (string Filename, string? Alias, Assembly Assembly)> _embeddedFonts = new(StringComparer.Ordinal);
+		readonly Dictionary<string, (string Filename, string? Alias)> _nativeFonts = new(StringComparer.Ordinal);
+		readonly Dictionary<string, string?> _fontLookupCache = new(StringComparer.Ordinal);
 		readonly IServiceProvider? _serviceProvider;
 
 		IEmbeddedFontLoader _fontLoader;
 
+		/// <summary>
+		/// Creates a new instance of <see cref="FontRegistrar"/>.
+		/// </summary>
+		/// <param name="fontLoader">An instance of <see cref="IEmbeddedFontLoader"/> that is responsible for actually loading fonts.</param>
+		/// <param name="serviceProvider">A reference to the app <see cref="IServiceProvider"/>.
+		/// Typically this should be provided through dependency injection for logging purposes, otherwise can be ignored.</param>
 		public FontRegistrar(IEmbeddedFontLoader fontLoader, IServiceProvider? serviceProvider = null)
 		{
 			_fontLoader = fontLoader;
 			_serviceProvider = serviceProvider;
 		}
 
+		/// <inheritdoc/>
 		public void Register(string filename, string? alias, Assembly assembly)
 		{
 			_embeddedFonts[filename] = (filename, alias, assembly);
@@ -30,6 +38,7 @@ namespace Microsoft.Maui
 				_embeddedFonts[alias!] = (filename, alias, assembly);
 		}
 
+		/// <inheritdoc/>
 		public void Register(string filename, string? alias)
 		{
 			_nativeFonts[filename] = (filename, alias);
@@ -38,6 +47,7 @@ namespace Microsoft.Maui
 				_nativeFonts[alias!] = (filename, alias);
 		}
 
+		/// <inheritdoc/>
 		public string? GetFont(string font)
 		{
 			if (_fontLookupCache.TryGetValue(font, out var foundResult))

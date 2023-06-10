@@ -1,4 +1,4 @@
-﻿#if !IOS
+﻿#if !IOS && !MACCATALYST
 using System.Threading.Tasks;
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.Graphics;
@@ -8,10 +8,10 @@ using Xunit;
 namespace Microsoft.Maui.DeviceTests
 {
 	[Category(TestCategory.Page)]
-	[Collection(HandlerTestBase.RunInNewWindowCollection)]
-	public partial class PageTests : HandlerTestBase
+	[Collection(ControlsHandlerTestBase.RunInNewWindowCollection)]
+	public partial class PageTests : ControlsHandlerTestBase
 	{
-		[Theory("Page Background Initializes Correctly With Background Prooperty")]
+		[Theory("Page Background Initializes Correctly With Background Property")]
 		[InlineData("#FF0000")]
 		[InlineData("#00FF00")]
 		[InlineData("#0000FF")]
@@ -24,11 +24,11 @@ namespace Microsoft.Maui.DeviceTests
 
 			await CreateHandlerAndAddToWindow<PageHandler>(page, async (handler) =>
 			{
-				await handler.PlatformView.AssertContainsColor(color);
+				await handler.PlatformView.AssertContainsColor(color, handler.MauiContext);
 			});
 		}
 
-		[Theory("Page Background Initializes Correctly With BackgroundColor Prooperty")]
+		[Theory("Page Background Initializes Correctly With BackgroundColor Property")]
 		[InlineData("#FF0000")]
 		[InlineData("#00FF00")]
 		[InlineData("#0000FF")]
@@ -41,11 +41,11 @@ namespace Microsoft.Maui.DeviceTests
 
 			await CreateHandlerAndAddToWindow<PageHandler>(page, async (handler) =>
 			{
-				await handler.PlatformView.AssertContainsColor(color);
+				await handler.PlatformView.AssertContainsColor(color, handler.MauiContext);
 			});
 		}
 
-		[Theory("Page Background Updates Correctly With Background Prooperty")]
+		[Theory("Page Background Updates Correctly With Background Property")]
 		[InlineData("#FF0000")]
 		[InlineData("#00FF00")]
 		[InlineData("#0000FF")]
@@ -60,11 +60,11 @@ namespace Microsoft.Maui.DeviceTests
 			{
 				page.Background = color;
 
-				await handler.PlatformView.AssertContainsColor(color);
+				await handler.PlatformView.AssertContainsColor(color, handler.MauiContext);
 			});
 		}
 
-		[Theory("Page Background Updates Correctly With BackgroundColor Prooperty")]
+		[Theory("Page Background Updates Correctly With BackgroundColor Property")]
 		[InlineData("#FF0000")]
 		[InlineData("#00FF00")]
 		[InlineData("#0000FF")]
@@ -79,7 +79,21 @@ namespace Microsoft.Maui.DeviceTests
 			{
 				page.BackgroundColor = color;
 
-				await handler.PlatformView.AssertContainsColor(color);
+				await handler.PlatformView.AssertContainsColor(color, handler.MauiContext);
+			});
+		}
+
+		[Fact("No issues using Page IsBusy property")]
+		public async Task UsingIsBusyNoCrash()
+		{
+			var page = new ContentPage();
+			page.IsBusy = true;
+
+			await CreateHandlerAndAddToWindow<PageHandler>(page, (handler) =>
+			{
+				// Validate that no exceptions are thrown
+				((IElementHandler)handler).DisconnectHandler();
+				return Task.CompletedTask;
 			});
 		}
 	}

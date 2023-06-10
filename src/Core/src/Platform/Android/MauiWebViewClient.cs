@@ -12,7 +12,7 @@ namespace Microsoft.Maui.Platform
 
 		public MauiWebViewClient(WebViewHandler handler)
 		{
-			_handler = handler ?? throw new ArgumentNullException("handler");
+			_handler = handler ?? throw new ArgumentNullException(nameof(handler));
 
 			_navigationResult = WebNavigationResult.Success;
 		}
@@ -24,7 +24,10 @@ namespace Microsoft.Maui.Platform
 			if (_handler?.VirtualView == null || url == WebViewHandler.AssetBaseUrl)
 				return;
 
-			// TODO: Sync Cookies
+			if (!string.IsNullOrWhiteSpace(url))
+			{
+				_handler.SyncPlatformCookiesToVirtualView(url);
+			}
 
 			var cancel = false;
 
@@ -91,9 +94,14 @@ namespace Microsoft.Maui.Platform
 		protected override void Dispose(bool disposing)
 		{
 			if (disposing)
-				_handler = null;
+				Disconnect();
 
 			base.Dispose(disposing);
+		}
+
+		internal void Disconnect()
+		{
+			_handler = null;
 		}
 	}
 }

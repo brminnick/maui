@@ -4,8 +4,8 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Data;
 using Windows.Foundation;
-using WThickness = Microsoft.UI.Xaml.Thickness;
 using WGridLength = Microsoft.UI.Xaml.GridLength;
+using WThickness = Microsoft.UI.Xaml.Thickness;
 
 namespace Microsoft.Maui.Platform
 {
@@ -17,6 +17,7 @@ namespace Microsoft.Maui.Platform
 		double AppBarTitleHeight => _useCustomAppTitleBar ? _appBarTitleHeight : 0;
 		double _appBarTitleHeight;
 		bool _useCustomAppTitleBar;
+		readonly FlyoutPanel _flyoutPanel = new FlyoutPanel();
 
 		public RootNavigationView()
 		{
@@ -221,7 +222,6 @@ namespace Microsoft.Maui.Platform
 			};
 
 			UpdateToolbarPlacement();
-			UpdateContentGridMargin();
 
 			if (Toolbar != null)
 			{
@@ -234,14 +234,6 @@ namespace Microsoft.Maui.Platform
 		void PaneContentTopPaddingChanged(DependencyObject sender, DependencyProperty dp)
 		{
 			UpdatePaneContentGridMargin();
-		}
-
-		void UpdateContentGridMargin()
-		{
-			if (PaneDisplayMode == NavigationViewPaneDisplayMode.Top)
-				NavigationViewContentMargin = new WThickness(0, 0, 0, 0);
-			else
-				NavigationViewContentMargin = new WThickness(0, AppBarTitleHeight, 0, 0);
 		}
 
 		internal void UpdateAppTitleBar(double appTitleBarHeight)
@@ -258,7 +250,6 @@ namespace Microsoft.Maui.Platform
 			_appBarTitleHeight = appTitleBarHeight;
 			UpdateNavigationAndPaneButtonHolderGridStyles();
 		}
-
 
 		void UpdateNavigationAndPaneButtonHolderGridStyles()
 		{
@@ -277,7 +268,6 @@ namespace Microsoft.Maui.Platform
 			if (PaneDisplayMode == NavigationViewPaneDisplayMode.LeftMinimal ||
 				PaneDisplayMode == NavigationViewPaneDisplayMode.Top)
 			{
-
 				NavigationViewButtonHolderGridMargin = new WThickness(0, 0, 0, 0);
 				NavigationViewBackButtonMargin = new WThickness(0, 0, 0, 0);
 				PaneToggleButtonPadding = new WThickness();
@@ -297,7 +287,6 @@ namespace Microsoft.Maui.Platform
 
 			UpdatePaneContentGridMargin();
 			UpdateToolbarPlacement();
-			UpdateContentGridMargin();
 		}
 
 		// This updates the amount of space between the top of the window
@@ -349,8 +338,6 @@ namespace Microsoft.Maui.Platform
 			_flyoutPanel.ContentWidth = FlyoutPaneSize.Width;
 			_flyoutPanel.InvalidateMeasure();
 		}
-
-		readonly FlyoutPanel _flyoutPanel = new FlyoutPanel();
 
 		void ReplacePaneMenuItemsWithCustomContent(UIElement? customContent)
 		{

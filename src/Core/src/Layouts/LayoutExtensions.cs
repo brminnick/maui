@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.CompilerServices;
 using Microsoft.Maui.Graphics;
 using Microsoft.Maui.Primitives;
 using static Microsoft.Maui.Primitives.Dimension;
@@ -37,11 +38,12 @@ namespace Microsoft.Maui.Layouts
 			// We need to determine the width the element wants to consume; normally that's the element's DesiredSize.Width
 			var consumedWidth = view.DesiredSize.Width;
 
+			// But if the element is set to fill horizontally and it doesn't have an explicitly set width,
+			// then we want the minimum between its MaximumWidth and the bounds' width
+			// MaximumWidth is always positive infinity if not defined by the user
 			if (view.HorizontalLayoutAlignment == LayoutAlignment.Fill && !IsExplicitSet(view.Width))
 			{
-				// But if the element is set to fill horizontally and it doesn't have an explicitly set width,
-				// then we want the width of the entire bounds
-				consumedWidth = bounds.Width;
+				consumedWidth = Math.Min(bounds.Width, view.MaximumWidth);
 			}
 
 			// And the actual frame width needs to subtract the margins
@@ -51,10 +53,11 @@ namespace Microsoft.Maui.Layouts
 			var consumedHeight = view.DesiredSize.Height;
 
 			// But, if the element is set to fill vertically and it doesn't have an explicitly set height,
-			// then we want the height of the entire bounds
+			// then we want the minimum between its MaximumHeight  and the bounds' height
+			// MaximumHeight is always positive infinity if not defined by the user
 			if (view.VerticalLayoutAlignment == LayoutAlignment.Fill && !IsExplicitSet(view.Height))
 			{
-				consumedHeight = bounds.Height;
+				consumedHeight = Math.Min(bounds.Height, view.MaximumHeight);
 			}
 
 			// And the actual frame height needs to subtract the margins
@@ -69,36 +72,19 @@ namespace Microsoft.Maui.Layouts
 		static double AlignHorizontal(IView view, Rect bounds, Thickness margin)
 		{
 			var alignment = view.HorizontalLayoutAlignment;
+			var desiredWidth = view.DesiredSize.Width;
 
-			if (alignment == LayoutAlignment.Fill && IsExplicitSet(view.Width))
+			if (alignment == LayoutAlignment.Fill && (IsExplicitSet(view.Width) || !double.IsInfinity(view.MaximumWidth)))
 			{
-				// If the view has an explicit width set and the layout alignment is Fill,
+				// If the view has an explicit width (or non-infinite MaxWidth) set and the layout alignment is Fill,
 				// we just treat the view as centered within the space it "fills"
 				alignment = LayoutAlignment.Center;
+
+				// If the width is not set, we use the minimum between the MaxWidth or the bound's width
+				desiredWidth = IsExplicitSet(view.Width) ? desiredWidth : Math.Min(bounds.Width, view.MaximumWidth);
 			}
 
-			var desiredWidth = view.DesiredSize.Width;
-			var startX = bounds.X;
-
-			if (view.ShouldArrangeLeftToRight())
-			{
-				return AlignHorizontal(startX, margin.Left, margin.Right, bounds.Width, desiredWidth, alignment);
-			}
-
-			// If the flowdirection is RTL, then we can use the same logic to determine the X position of the Frame;
-			// we just have to flip a few parameters. First we flip the alignment if it's start or end:
-
-			if (alignment == LayoutAlignment.End)
-			{
-				alignment = LayoutAlignment.Start;
-			}
-			else if (alignment == LayoutAlignment.Start)
-			{
-				alignment = LayoutAlignment.End;
-			}
-
-			// And then we swap the left and right margins: 
-			return AlignHorizontal(startX, margin.Right, margin.Left, bounds.Width, desiredWidth, alignment);
+			return AlignHorizontal(bounds.X, margin.Left, margin.Right, bounds.Width, desiredWidth, alignment);
 		}
 
 		static double AlignHorizontal(double startX, double startMargin, double endMargin, double boundsWidth,
@@ -123,12 +109,16 @@ namespace Microsoft.Maui.Layouts
 		static double AlignVertical(IView view, Rect bounds, Thickness margin)
 		{
 			var alignment = view.VerticalLayoutAlignment;
+			var desiredHeight = view.DesiredSize.Height;
 
-			if (alignment == LayoutAlignment.Fill && IsExplicitSet(view.Height))
+			if (alignment == LayoutAlignment.Fill && (IsExplicitSet(view.Height) || !double.IsInfinity(view.MaximumHeight)))
 			{
-				// If the view has an explicit height set and the layout alignment is Fill,
+				// If the view has an explicit height (or non-infinite MaxHeight) set and the layout alignment is Fill,
 				// we just treat the view as centered within the space it "fills"
 				alignment = LayoutAlignment.Center;
+
+				// If the height is not set, we use the minimum between the MaxHeight or the bound's height
+				desiredHeight = IsExplicitSet(view.Height) ? desiredHeight : Math.Min(bounds.Height, view.MaximumHeight);
 			}
 
 			double frameY = bounds.Y + margin.Top;
@@ -136,11 +126,11 @@ namespace Microsoft.Maui.Layouts
 			switch (alignment)
 			{
 				case LayoutAlignment.Center:
-					frameY += (bounds.Height - view.DesiredSize.Height) / 2;
+					frameY += (bounds.Height - desiredHeight) / 2;
 					break;
 
 				case LayoutAlignment.End:
-					frameY += bounds.Height - view.DesiredSize.Height;
+					frameY += bounds.Height - desiredHeight;
 					break;
 			}
 
@@ -207,17 +197,37 @@ namespace Microsoft.Maui.Layouts
 			return size;
 		}
 
-		public static bool ShouldArrangeLeftToRight(this IView view)
+		/// <summary>
+		/// Arranges content which can exceed the bounds of the IContentView.
+		/// </summary>
+		/// <remarks>
+		/// Useful for arranging content where the IContentView provides a viewport to a portion of the content (e.g, 
+		/// the content of an IScrollView).
+		/// </remarks>
+		/// <param name="contentView"></param>
+		/// <param name="bounds"></param>
+		/// <returns>The Size of the arranged content</returns>
+		public static Size ArrangeContentUnbounded(this IContentView contentView, Rect bounds)
 		{
-			var viewFlowDirection = view.GetEffectiveFlowDirection();
+			var presentedContent = contentView.PresentedContent;
 
-			// The various platforms handle layout and flow direction in different ways; some platforms
-			// helpfully flip the coordinates of arrange calls when in RTL mode, others don't
-			// So this gives us a place to ask the platform (via LayoutHandler) whether we need to do 
-			// the layout work to flip RTL stuff in our cross-platform layouts or not.
-			var layoutFlowDirection = LayoutHandler.GetLayoutFlowDirection(viewFlowDirection);
+			if (presentedContent == null)
+			{
+				return bounds.Size;
+			}
 
-			return layoutFlowDirection == FlowDirection.LeftToRight;
+			var padding = contentView.Padding;
+
+			// Normally we'd just want the content to be arranged within the ContentView's Frame,
+			// but in this case the content may exceed the size of the Frame.
+			// So in each dimension, we assume the larger of the two values.
+
+			bounds.Width = Math.Max(bounds.Width, presentedContent.DesiredSize.Width + padding.HorizontalThickness);
+			bounds.Height = Math.Max(bounds.Height, presentedContent.DesiredSize.Height + padding.VerticalThickness);
+
+			contentView.ArrangeContent(bounds);
+
+			return bounds.Size;
 		}
 	}
 }

@@ -1,167 +1,222 @@
 ﻿using System.Threading.Tasks;
-using NUnit.Framework;
+using Xunit;
 
 namespace Microsoft.Maui.Controls.Core.UnitTests
 {
-	[TestFixture]
+
 	public class PageLifeCycleTests : BaseTestFixture
 	{
-		[TestCase(false)]
-		[TestCase(true)]
-		public void NavigationPageInitialPage(bool useMaui)
+		[Fact]
+		// This test isn't valid for non handler based
+		// navigation because the initial navigated event
+		// fires from the legacy code instead of the
+		// new handler code
+		// We have device tests to also verify this works on 
+		// each platform
+		public async Task NavigationPageInitialPage()
 		{
 			var lcPage = new LCPage();
-			NavigationPage navigationPage = new TestNavigationPage(useMaui, lcPage);
-			navigationPage.InitialNativeNavigationStackLoaded();
-			Assert.IsNull(lcPage.NavigatingFromArgs);
-			Assert.IsNull(lcPage.NavigatedFromArgs);
+			var navigationPage = new TestNavigationPage(true, lcPage)
+					.AddToTestWindow();
+
+			await navigationPage.NavigatingTask;
+			Assert.Null(lcPage.NavigatingFromArgs);
+			Assert.Null(lcPage.NavigatedFromArgs);
 			Assert.NotNull(lcPage.NavigatedToArgs);
-			Assert.IsNull(lcPage.NavigatedToArgs.PreviousPage);
+			Assert.Null(lcPage.NavigatedToArgs.PreviousPage);
 		}
 
-		[TestCase(false)]
-		[TestCase(true)]
+		[Theory]
+		[InlineData(false)]
+		[InlineData(true)]
 		public async Task NavigationPagePushPage(bool useMaui)
 		{
 			var previousPage = new LCPage();
 			var lcPage = new LCPage();
-			NavigationPage navigationPage = new TestNavigationPage(useMaui, previousPage);
+			var navigationPage =
+				new TestNavigationPage(useMaui, previousPage)
+					.AddToTestWindow();
+
 			await navigationPage.PushAsync(lcPage);
 
-			Assert.IsNotNull(previousPage.NavigatingFromArgs);
-			Assert.AreEqual(previousPage, lcPage.NavigatedToArgs.PreviousPage);
-			Assert.AreEqual(lcPage, previousPage.NavigatedFromArgs.DestinationPage);
+			Assert.NotNull(previousPage.NavigatingFromArgs);
+			Assert.NotNull(lcPage.NavigatedToArgs);
+			Assert.NotNull(previousPage.NavigatedFromArgs);
+			Assert.Equal(previousPage, lcPage.NavigatedToArgs.PreviousPage);
+			Assert.Equal(lcPage, previousPage.NavigatedFromArgs.DestinationPage);
 		}
 
-		[TestCase(false)]
-		[TestCase(true)]
+		[Theory]
+		[InlineData(false)]
+		[InlineData(true)]
 		public async Task NavigationPagePopPage(bool useMaui)
 		{
 			var firstPage = new LCPage();
 			var poppedPage = new LCPage();
 
-			NavigationPage navigationPage = new TestNavigationPage(useMaui, firstPage);
+			NavigationPage navigationPage = new TestNavigationPage(useMaui, firstPage)
+					.AddToTestWindow();
+
 			await navigationPage.PushAsync(poppedPage);
 			await navigationPage.PopAsync();
 
-			Assert.IsNotNull(poppedPage.NavigatingFromArgs);
-			Assert.AreEqual(poppedPage, firstPage.NavigatedToArgs.PreviousPage);
-			Assert.AreEqual(firstPage, poppedPage.NavigatedFromArgs.DestinationPage);
+			Assert.NotNull(poppedPage.NavigatingFromArgs);
+			Assert.Equal(poppedPage, firstPage.NavigatedToArgs.PreviousPage);
+			Assert.Equal(firstPage, poppedPage.NavigatedFromArgs.DestinationPage);
 		}
 
-		[TestCase(false)]
-		[TestCase(true)]
+		[Theory]
+		[InlineData(false)]
+		[InlineData(true)]
 		public async Task NavigationPagePopToRoot(bool useMaui)
 		{
 			var firstPage = new LCPage();
 			var poppedPage = new LCPage();
 
-			NavigationPage navigationPage = new TestNavigationPage(useMaui, firstPage);
+			NavigationPage navigationPage = new TestNavigationPage(useMaui, firstPage)
+					.AddToTestWindow();
+
 			await navigationPage.PushAsync(new ContentPage());
 			await navigationPage.PushAsync(new ContentPage());
 			await navigationPage.PushAsync(poppedPage);
 			await navigationPage.PopToRootAsync();
 
-			Assert.IsNotNull(poppedPage.NavigatingFromArgs);
-			Assert.AreEqual(poppedPage, firstPage.NavigatedToArgs.PreviousPage);
-			Assert.AreEqual(firstPage, poppedPage.NavigatedFromArgs.DestinationPage);
+			Assert.NotNull(poppedPage.NavigatingFromArgs);
+			Assert.Equal(poppedPage, firstPage.NavigatedToArgs.PreviousPage);
+			Assert.Equal(firstPage, poppedPage.NavigatedFromArgs.DestinationPage);
 		}
 
-		[Test]
+		[Fact]
 		public async Task TabbedPageBasicSelectionChanged()
 		{
 			var firstPage = new LCPage() { Title = "First Page" };
 			var secondPage = new LCPage() { Title = "Second Page" };
-			var tabbedPage = new TabbedPage() { Children = { firstPage, secondPage } };
+			var tabbedPage = new TabbedPage() { Children = { firstPage, secondPage } }.AddToTestWindow();
 
 			tabbedPage.CurrentPage = secondPage;
-			Assert.IsNotNull(firstPage.NavigatingFromArgs);
-			Assert.AreEqual(firstPage, secondPage.NavigatedToArgs.PreviousPage);
-			Assert.AreEqual(secondPage, firstPage.NavigatedFromArgs.DestinationPage);
+			Assert.NotNull(firstPage.NavigatingFromArgs);
+			Assert.Equal(firstPage, secondPage.NavigatedToArgs.PreviousPage);
+			Assert.Equal(secondPage, firstPage.NavigatedFromArgs.DestinationPage);
 		}
 
-		[Test]
+		[Fact]
 		public void TabbedPageInitialPage()
 		{
 			var firstPage = new LCPage() { Title = "First Page" };
 			var secondPage = new LCPage() { Title = "Second Page" };
-			var tabbedPage = new TabbedPage() { Children = { firstPage, secondPage } };
-			Assert.IsNull(firstPage.NavigatingFromArgs);
-			Assert.IsNull(firstPage.NavigatedFromArgs);
+			var tabbedPage = new TabbedPage().AddToTestWindow();
+
+			tabbedPage.Children.Add(firstPage);
+			tabbedPage.Children.Add(secondPage);
+			Assert.Null(firstPage.NavigatingFromArgs);
+			Assert.Null(firstPage.NavigatedFromArgs);
 			Assert.NotNull(firstPage.NavigatedToArgs);
-			Assert.IsNull(firstPage.NavigatedToArgs.PreviousPage);
+			Assert.Null(firstPage.NavigatedToArgs.PreviousPage);
 		}
 
-		[Test]
+		[Fact]
 		public async Task FlyoutPageFlyoutChanged()
 		{
 			var firstPage = new LCPage() { Title = "First Page" };
 			var secondPage = new LCPage() { Title = "Second Page" };
-			var flyoutPage = new FlyoutPage() { Flyout = firstPage };
+			var flyoutPage = new FlyoutPage()
+			{
+				Detail = new ContentPage() { Title = "Detail" },
+				Flyout = firstPage
+			}.AddToTestWindow();
+
 			flyoutPage.Flyout = secondPage;
 
-			Assert.IsNotNull(firstPage.NavigatingFromArgs);
-			Assert.AreEqual(firstPage, secondPage.NavigatedToArgs.PreviousPage);
-			Assert.AreEqual(secondPage, firstPage.NavigatedFromArgs.DestinationPage);
+			Assert.NotNull(firstPage.NavigatingFromArgs);
+			Assert.Equal(firstPage, secondPage.NavigatedToArgs.PreviousPage);
+			Assert.Equal(secondPage, firstPage.NavigatedFromArgs.DestinationPage);
 		}
 
-		[Test]
+		[Fact]
 		public async Task FlyoutPageDetailChanged()
 		{
 			var firstPage = new LCPage() { Title = "First Page" };
 			var secondPage = new LCPage() { Title = "Second Page" };
-			var flyoutPage = new FlyoutPage() { Detail = firstPage };
+			var flyoutPage = new FlyoutPage()
+			{
+				Detail = firstPage,
+				Flyout = new ContentPage() { Title = "Flyout" }
+			}.AddToTestWindow();
+
 			flyoutPage.Detail = secondPage;
 
-			Assert.IsNotNull(firstPage.NavigatingFromArgs);
-			Assert.AreEqual(firstPage, secondPage.NavigatedToArgs.PreviousPage);
-			Assert.AreEqual(secondPage, firstPage.NavigatedFromArgs.DestinationPage);
+			Assert.NotNull(firstPage.NavigatingFromArgs);
+			Assert.Equal(firstPage, secondPage.NavigatedToArgs.PreviousPage);
+			Assert.Equal(secondPage, firstPage.NavigatedFromArgs.DestinationPage);
 		}
 
-		[Test]
+		[Fact]
 		public async Task PushModalPage()
 		{
 			var previousPage = new LCPage();
 			var lcPage = new LCPage();
-			var window = new Window(previousPage);
+			var window = new TestWindow(previousPage);
 
 			await window.Navigation.PushModalAsync(lcPage);
 
-			Assert.IsNotNull(previousPage.NavigatingFromArgs);
-			Assert.AreEqual(previousPage, lcPage.NavigatedToArgs.PreviousPage);
-			Assert.AreEqual(lcPage, previousPage.NavigatedFromArgs.DestinationPage);
+			Assert.NotNull(previousPage.NavigatingFromArgs);
+			Assert.Equal(previousPage, lcPage.NavigatedToArgs.PreviousPage);
+			Assert.Equal(lcPage, previousPage.NavigatedFromArgs.DestinationPage);
 
-			Assert.AreEqual(1, previousPage.DisappearingCount);
-			Assert.AreEqual(1, lcPage.AppearingCount);
+			Assert.Equal(1, previousPage.DisappearingCount);
+			Assert.Equal(1, lcPage.AppearingCount);
 		}
 
-		[Test]
+		[Theory]
+		[InlineData(false)]
+		[InlineData(true)]
+		public async Task NavigationPagePropagatesEventsWhenCoveredByModal(bool useMaui)
+		{
+			var lcPage = new ContentPage();
+			var targetPage = new LCPage();
+			var modalPage = new ContentPage();
+			var window = new TestWindow(new TestNavigationPage(useMaui, lcPage));
+
+			await window.Page.Navigation.PushAsync(targetPage);
+			targetPage.ClearNavigationArgs();
+			await window.Navigation.PushModalAsync(modalPage);
+
+			Assert.NotNull(targetPage.NavigatingFromArgs);
+			Assert.Null(targetPage.NavigatedToArgs);
+
+			await window.Navigation.PopModalAsync();
+			Assert.NotNull(targetPage.NavigatedToArgs);
+
+			Assert.Equal(modalPage, targetPage.NavigatedToArgs.PreviousPage);
+		}
+
+		[Fact]
 		public async Task PopModalPage()
 		{
 			var firstPage = new LCPage();
 			var poppedPage = new LCPage();
 
-			var window = new Window(firstPage);
+			var window = new TestWindow(firstPage);
 			await window.Navigation.PushModalAsync(poppedPage);
 			await window.Navigation.PopModalAsync();
 
-			Assert.IsNotNull(poppedPage.NavigatingFromArgs);
-			Assert.AreEqual(poppedPage, firstPage.NavigatedToArgs.PreviousPage);
-			Assert.AreEqual(firstPage, poppedPage.NavigatedFromArgs.DestinationPage);
+			Assert.NotNull(poppedPage.NavigatingFromArgs);
+			Assert.Equal(poppedPage, firstPage.NavigatedToArgs.PreviousPage);
+			Assert.Equal(firstPage, poppedPage.NavigatedFromArgs.DestinationPage);
 
-			Assert.AreEqual(1, poppedPage.AppearingCount);
-			Assert.AreEqual(1, poppedPage.DisappearingCount);
-			Assert.AreEqual(2, firstPage.AppearingCount);
+			Assert.Equal(1, poppedPage.AppearingCount);
+			Assert.Equal(1, poppedPage.DisappearingCount);
+			Assert.Equal(2, firstPage.AppearingCount);
 		}
 
-		[Test]
+		[Fact]
 		public async Task PopToAModalPage()
 		{
 			var firstPage = new LCPage();
 			var firstModalPage = new LCPage();
 			var secondModalPage = new LCPage();
 
-			var window = new Window(firstPage);
+			var window = new TestWindow(firstPage);
 			await window.Navigation.PushModalAsync(firstModalPage);
 			await window.Navigation.PushModalAsync(secondModalPage);
 
@@ -170,25 +225,25 @@ namespace Microsoft.Maui.Controls.Core.UnitTests
 
 			await window.Navigation.PopModalAsync();
 
-			Assert.IsNotNull(secondModalPage.NavigatingFromArgs);
-			Assert.AreEqual(secondModalPage, firstModalPage.NavigatedToArgs.PreviousPage);
-			Assert.AreEqual(firstModalPage, secondModalPage.NavigatedFromArgs.DestinationPage);
+			Assert.NotNull(secondModalPage.NavigatingFromArgs);
+			Assert.Equal(secondModalPage, firstModalPage.NavigatedToArgs.PreviousPage);
+			Assert.Equal(firstModalPage, secondModalPage.NavigatedFromArgs.DestinationPage);
 
-			Assert.AreEqual(1, secondModalPage.DisappearingCount);
-			Assert.AreEqual(1, secondModalPage.AppearingCount);
+			Assert.Equal(1, secondModalPage.DisappearingCount);
+			Assert.Equal(1, secondModalPage.AppearingCount);
 
-			Assert.AreEqual(1, firstModalPage.DisappearingCount);
-			Assert.AreEqual(2, firstModalPage.AppearingCount);
+			Assert.Equal(1, firstModalPage.DisappearingCount);
+			Assert.Equal(2, firstModalPage.AppearingCount);
 		}
 
-		[Test]
+		[Fact]
 		public async Task PushSecondModalPage()
 		{
 			var firstPage = new LCPage();
 			var firstModalPage = new LCPage();
 			var secondModalPage = new LCPage();
 
-			var window = new Window(firstPage);
+			var window = new TestWindow(firstPage);
 			await window.Navigation.PushModalAsync(firstModalPage);
 
 			firstModalPage.ClearNavigationArgs();
@@ -196,18 +251,18 @@ namespace Microsoft.Maui.Controls.Core.UnitTests
 
 			await window.Navigation.PushModalAsync(secondModalPage);
 
-			Assert.IsNotNull(firstModalPage.NavigatingFromArgs);
-			Assert.AreEqual(firstModalPage, secondModalPage.NavigatedToArgs.PreviousPage);
-			Assert.AreEqual(secondModalPage, firstModalPage.NavigatedFromArgs.DestinationPage);
+			Assert.NotNull(firstModalPage.NavigatingFromArgs);
+			Assert.Equal(firstModalPage, secondModalPage.NavigatedToArgs.PreviousPage);
+			Assert.Equal(secondModalPage, firstModalPage.NavigatedFromArgs.DestinationPage);
 
-			Assert.AreEqual(0, secondModalPage.DisappearingCount);
-			Assert.AreEqual(1, secondModalPage.AppearingCount);
+			Assert.Equal(0, secondModalPage.DisappearingCount);
+			Assert.Equal(1, secondModalPage.AppearingCount);
 
-			Assert.AreEqual(1, firstModalPage.DisappearingCount);
-			Assert.AreEqual(1, firstModalPage.AppearingCount);
+			Assert.Equal(1, firstModalPage.DisappearingCount);
+			Assert.Equal(1, firstModalPage.AppearingCount);
 		}
 
-		class LCPage : ContentPage
+		public class LCPage : ContentPage
 		{
 			public NavigatedFromEventArgs NavigatedFromArgs { get; private set; }
 			public NavigatingFromEventArgs NavigatingFromArgs { get; private set; }

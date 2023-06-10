@@ -1,4 +1,6 @@
-﻿#nullable enable
+#nullable enable
+using System.Diagnostics.CodeAnalysis;
+
 namespace Microsoft.Maui.Graphics
 {
 	public static partial class PaintExtensions
@@ -20,7 +22,7 @@ namespace Microsoft.Maui.Graphics
 			return null;
 		}
 
-		public static bool IsNullOrEmpty(this Paint? paint)
+		public static bool IsNullOrEmpty([NotNullWhen(true)] this Paint? paint)
 		{
 			if (paint is SolidPaint solidPaint)
 				return solidPaint == null || solidPaint.Color == null;
@@ -35,6 +37,14 @@ namespace Microsoft.Maui.Graphics
 				return patternPaint == null || patternPaint.Pattern == null;
 
 			return paint == null;
+		}
+
+		internal static bool IsTransparent(this Paint? paint)
+		{
+			if (paint is SolidPaint solidPaint)
+				return solidPaint.Color == Colors.Transparent;
+
+			return false;
 		}
 	}
 }

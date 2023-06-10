@@ -1,4 +1,5 @@
-﻿namespace Microsoft.Maui.Controls
+﻿#nullable disable
+namespace Microsoft.Maui.Controls
 {
 	public partial class SearchBar
 	{
@@ -18,6 +19,10 @@
 		{
 			// Adjust the mappings to preserve Controls.SearchBar legacy behaviors
 			SearchBarHandler.Mapper = ControlsSearchBarMapper;
+
+#if ANDROID
+			SearchBarHandler.CommandMapper.PrependToMapping(nameof(ISearchBar.Focus), MapFocus);
+#endif
 		}
 	}
 }

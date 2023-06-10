@@ -2,12 +2,14 @@
 using System.Collections.Concurrent;
 using System.IO;
 using Android.Graphics;
+using Android.Graphics.Fonts;
 using Android.Util;
 using Microsoft.Extensions.Logging;
 using AApplication = Android.App.Application;
 
 namespace Microsoft.Maui
 {
+	/// <inheritdoc/>
 	public class FontManager : IFontManager
 	{
 		static readonly string[] FontFolders = new[]
@@ -22,16 +24,25 @@ namespace Microsoft.Maui
 
 		Typeface? _defaultTypeface;
 
+		/// <summary>
+		/// Creates a new <see cref="EmbeddedFontLoader"/> instance.
+		/// </summary>
+		/// <param name="fontRegistrar">A <see cref="IFontRegistrar"/> instance to retrieve details from about registered fonts.</param>
+		/// <param name="serviceProvider">The applications <see cref="IServiceProvider"/>.
+		/// Typically this is provided through dependency injection.</param>
 		public FontManager(IFontRegistrar fontRegistrar, IServiceProvider? serviceProvider = null)
 		{
 			_fontRegistrar = fontRegistrar;
 			_serviceProvider = serviceProvider;
 		}
 
+		/// <inheritdoc/>
 		public double DefaultFontSize => 14; // 14sp
 
+		/// <inheritdoc/>
 		public Typeface DefaultTypeface => _defaultTypeface ??= Typeface.Default!;
 
+		/// <inheritdoc/>
 		public Typeface? GetTypeface(Font font)
 		{
 			if (font == Font.Default || (font.Weight == FontWeight.Regular && string.IsNullOrEmpty(font.Family) && font.Slant == FontSlant.Default))
@@ -40,6 +51,7 @@ namespace Microsoft.Maui
 			return _typefaces.GetOrAdd((font.Family, font.Weight, font.Slant != FontSlant.Default), CreateTypeface);
 		}
 
+		/// <inheritdoc/>
 		public FontSize GetFontSize(Font font, float defaultFontSize = 0)
 		{
 			var size = font.Size <= 0 || double.IsNaN(font.Size)
@@ -119,6 +131,22 @@ namespace Microsoft.Maui
 			return null;
 		}
 
+		Typeface? LoadDefaultTypeface(string fontfamily)
+		{
+			switch (fontfamily.ToLowerInvariant())
+			{
+				case "monospace":
+					return Typeface.Monospace;
+				case "sansserif":
+				case "sans-serif":
+					return Typeface.SansSerif;
+				case "serif":
+					return Typeface.Serif;
+				default:
+					return null;
+			}
+		}
+
 		Typeface? CreateTypeface((string? fontFamilyName, FontWeight weight, bool italic) fontData)
 		{
 			var (fontFamily, weight, italic) = fontData;
@@ -129,7 +157,9 @@ namespace Microsoft.Maui
 
 			if (!string.IsNullOrWhiteSpace(fontFamily))
 			{
-				if (GetFromAssets(fontFamily) is Typeface typeface)
+				if (LoadDefaultTypeface(fontFamily) is Typeface systemTypeface)
+					result = systemTypeface;
+				else if (GetFromAssets(fontFamily) is Typeface typeface)
 					result = typeface;
 				else
 					result = Typeface.Create(fontFamily, style);

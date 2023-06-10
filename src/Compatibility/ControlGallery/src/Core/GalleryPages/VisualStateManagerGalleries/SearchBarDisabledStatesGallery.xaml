@@ -4,7 +4,7 @@
 			xmlns:windowsSpecific="clr-namespace:Microsoft.Maui.Controls.PlatformConfiguration.WindowsSpecific;assembly=Microsoft.Maui.Controls"
 			xmlns:androidSpecific="clr-namespace:Microsoft.Maui.Controls.PlatformConfiguration.AndroidSpecific;assembly=Microsoft.Maui.Controls"
 			xmlns:iosSpecific="clr-namespace:Microsoft.Maui.Controls.PlatformConfiguration.iOSSpecific;assembly=Microsoft.Maui.Controls"
-             x:Class="Microsoft.Maui.Controls.Compatibility.ControlGallery.GalleryPages.VisualStateManagerGalleries.SearchBarDisabledStatesGallery"
+             x:Class="Microsoft.Maui.Controls.ControlGallery.GalleryPages.VisualStateManagerGalleries.SearchBarDisabledStatesGallery"
 			Title="SearchBar Disabled States Gallery">
 
 	<ContentPage.Resources>
@@ -79,7 +79,7 @@
 				<Button Text="Toggle IsEnabled" x:Name="Button2" Clicked="Button2_OnClicked" />
 
 				<!-- This section verifies that the default colors for a searchbar's text and placeholder are cached and can be reverted to -->
-				<Label Text="This SearchBar uses null for the intial text/background, and colors from the VSM when disabled."/>
+				<Label Text="This SearchBar uses null for the initial text/background, and colors from the VSM when disabled."/>
 				<SearchBar x:Name="Search3" Style="{StaticResource DefaultInInitialState}" TextColor="Default" 
 						PlaceholderColor="Default" Placeholder="placeholder" BackgroundColor="Default"
 						CancelButtonColor="Default" />

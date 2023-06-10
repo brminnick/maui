@@ -1,3 +1,4 @@
+#nullable disable
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -18,6 +19,7 @@ namespace Microsoft.Maui.Controls.Handlers.Items
 		CGSize _adjustmentSize0;
 		CGSize _adjustmentSize1;
 		CGSize _currentSize;
+		WeakReference<Func<UICollectionViewCell>> _getPrototype;
 
 		const double ConstraintSizeTolerance = 0.00001;
 
@@ -27,7 +29,11 @@ namespace Microsoft.Maui.Controls.Handlers.Items
 
 		public nfloat ConstrainedDimension { get; set; }
 
-		public Func<UICollectionViewCell> GetPrototype { get; set; }
+		public Func<UICollectionViewCell> GetPrototype
+		{
+			get => _getPrototype is not null && _getPrototype.TryGetTarget(out var func) ? func : null;
+			set => _getPrototype = new(value);
+		}
 
 		internal ItemSizingStrategy ItemSizingStrategy { get; private set; }
 
@@ -44,7 +50,11 @@ namespace Microsoft.Maui.Controls.Handlers.Items
 
 			Initialize(scrollDirection);
 
-			if (OperatingSystem.IsIOSVersionAtLeast(11) || OperatingSystem.IsTvOSVersionAtLeast(11))
+			if (OperatingSystem.IsIOSVersionAtLeast(11) || OperatingSystem.IsMacCatalystVersionAtLeast(11)
+#if TVOS
+				|| OperatingSystem.IsTvOSVersionAtLeast(11)
+#endif
+			)
 			{
 				// `ContentInset` is actually the default value, but I'm leaving this here as a note to
 				// future maintainers; it's likely that someone will want a Platform Specific to change this behavior
@@ -563,7 +573,11 @@ namespace Microsoft.Maui.Controls.Handlers.Items
 				return base.ShouldInvalidateLayoutForBoundsChange(newBounds);
 			}
 
-			if (OperatingSystem.IsIOSVersionAtLeast(11) || OperatingSystem.IsTvOSVersionAtLeast(11))
+			if (OperatingSystem.IsIOSVersionAtLeast(11) || OperatingSystem.IsMacCatalystVersionAtLeast(11)
+#if TVOS
+				|| OperatingSystem.IsTvOSVersionAtLeast(11)
+#endif
+			)
 			{
 				UpdateConstraints(CollectionView.AdjustedContentInset.InsetRect(newBounds).Size);
 			}

@@ -12,8 +12,8 @@ using PlatformView = Android.Views.View;
 using PlatformImage = Microsoft.UI.Xaml.Media.ImageSource;
 using PlatformView = Microsoft.UI.Xaml.FrameworkElement;
 #elif TIZEN
-using PlatformImage = Tizen.UIExtensions.ElmSharp.Image;
-using PlatformView = ElmSharp.EvasObject;
+using PlatformImage = Microsoft.Maui.Platform.MauiImageSource;
+using PlatformView = Tizen.NUI.BaseComponents.View;
 #elif (NETSTANDARD || !PLATFORM) || (NET6_0_OR_GREATER && !IOS && !ANDROID && !TIZEN)
 using PlatformImage = System.Object;
 using PlatformView = System.Object;
@@ -42,6 +42,7 @@ namespace Microsoft.Maui.Platform
 		{
 			Handler = handler;
 			_imageSourcePart = imageSourcePart;
+
 			SetImage = setImage;
 		}
 
@@ -52,33 +53,28 @@ namespace Microsoft.Maui.Platform
 
 		public async Task UpdateImageSourceAsync()
 		{
-			if (PlatformView != null)
+			if (PlatformView is null)
 			{
-				var token = this.SourceManager.BeginLoad();
-				var imageSource = _imageSourcePart();
+				return;
+			}
 
-				if (imageSource != null)
-				{
-#if IOS || ANDROID || WINDOWS
-					var result = await imageSource.UpdateSourceAsync(PlatformView, ImageSourceServiceProvider, SetImage!, token)
-						.ConfigureAwait(false);
+			var token = this.SourceManager.BeginLoad();
+			var imageSource = _imageSourcePart();
 
-					SourceManager.CompleteLoad(result);
-#elif TIZEN
-					PlatformImage image = (PlatformView as PlatformImage)??new PlatformImage(PlatformView);
-					var result = await imageSource.UpdateSourceAsync(image, ImageSourceServiceProvider, SetImage!, token)
-						.ConfigureAwait(false);
+			if (imageSource?.Source is not null)
+			{
+#if __IOS__ || __ANDROID__ || WINDOWS || TIZEN
+				var result = await imageSource.UpdateSourceAsync(PlatformView, ImageSourceServiceProvider, SetImage!, token)
+					.ConfigureAwait(false);
 
-					SourceManager.CompleteLoad(result);
+				SourceManager.CompleteLoad(result);
 #else
-					await Task.CompletedTask;
+				await Task.CompletedTask;
 #endif
-				}
-				else
-				{
-					SetImage?.Invoke(null);
-					SourceManager.CompleteLoad(null);
-				}
+			}
+			else
+			{
+				SetImage?.Invoke(null);
 			}
 		}
 	}

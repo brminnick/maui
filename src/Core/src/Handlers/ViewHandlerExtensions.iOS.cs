@@ -1,4 +1,5 @@
 ﻿using CoreGraphics;
+using CoreHaptics;
 using Microsoft.Maui.Graphics;
 using UIKit;
 using static Microsoft.Maui.Primitives.Dimension;
@@ -23,7 +24,13 @@ namespace Microsoft.Maui
 			}
 
 			bounds = bounds ?? platformView.Bounds;
-			if (virtualView is ISafeAreaView sav && !sav.IgnoreSafeArea && (System.OperatingSystem.IsIOSVersionAtLeast(11) || System.OperatingSystem.IsTvOSVersionAtLeast(11)))
+
+			if (virtualView is ISafeAreaView sav && !sav.IgnoreSafeArea
+				&& (System.OperatingSystem.IsIOSVersionAtLeast(11) || System.OperatingSystem.IsMacCatalystVersionAtLeast(11)
+#if TVOS
+				|| OperatingSystem.IsTvOSVersionAtLeast(11)
+#endif
+				))
 			{
 				bounds = platformView.SafeAreaInsets.InsetRect(bounds.Value);
 			}
@@ -90,13 +97,26 @@ namespace Microsoft.Maui
 			if (platformView == null)
 				return;
 
+			var centerX = rect.Center.X;
+
+			var parent = platformView.Superview;
+			if (parent?.EffectiveUserInterfaceLayoutDirection == UIUserInterfaceLayoutDirection.RightToLeft)
+			{
+				// We'll need to adjust the center point to reflect the RTL layout
+				// Find the center of the parent
+				var parentCenter = parent.Bounds.Right - (parent.Bounds.Width / 2);
+
+				// Figure out how far the center of the destination rect is from the center of the parent
+				var distanceFromParentCenter = parentCenter - centerX;
+
+				// Mirror the center to the other side of the center of the parent
+				centerX += (distanceFromParentCenter * 2);
+			}
+
 			// We set Center and Bounds rather than Frame because Frame is undefined if the CALayer's transform is 
 			// anything other than the identity (https://developer.apple.com/documentation/uikit/uiview/1622459-transform)
-			platformView.Center = new CoreGraphics.CGPoint(rect.Center.X, rect.Center.Y);
-
-			// The position of Bounds is usually (0,0), but in some cases (e.g., UIScrollView) it's the content offset.
-			// So just leave it a whatever value iOS thinks it should be.
-			platformView.Bounds = new CoreGraphics.CGRect(platformView.Bounds.X, platformView.Bounds.Y, rect.Width, rect.Height);
+			platformView.Center = new CGPoint(centerX, rect.Center.Y);
+			platformView.Bounds = new CGRect(platformView.Bounds.X, platformView.Bounds.Y, rect.Width, rect.Height);
 
 			viewHandler.Invoke(nameof(IView.Frame), rect);
 		}

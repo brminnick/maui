@@ -1,6 +1,8 @@
-﻿using Android.Content.Res;
-using Android.Graphics.Drawables;
+using Android.Content;
+using Android.Content.Res;
+using Android.Views;
 using Android.Widget;
+using AndroidX.AppCompat.Widget;
 using static AndroidX.AppCompat.Widget.SearchView;
 using SearchView = AndroidX.AppCompat.Widget.SearchView;
 
@@ -8,30 +10,34 @@ namespace Microsoft.Maui.Handlers
 {
 	public partial class SearchBarHandler : ViewHandler<ISearchBar, SearchView>
 	{
+		FocusChangeListener FocusListener { get; } = new FocusChangeListener();
+
 		static ColorStateList? DefaultPlaceholderTextColors { get; set; }
 
-		EditText? _editText;
+		MauiSearchView? _platformSearchView;
 
-		public EditText? QueryEditor => _editText;
+		public EditText? QueryEditor => _platformSearchView?._queryEditor;
 
 		protected override SearchView CreatePlatformView()
 		{
-			var searchView = new SearchView(Context);
-			searchView.SetIconifiedByDefault(false);
-
-			_editText = searchView.GetFirstChildOfType<EditText>();
-
-			return searchView;
+			_platformSearchView = new MauiSearchView(Context);
+			return _platformSearchView;
 		}
 
 		protected override void ConnectHandler(SearchView platformView)
 		{
+			FocusListener.Handler = this;
+			platformView.SetOnQueryTextFocusChangeListener(FocusListener);
+
 			platformView.QueryTextChange += OnQueryTextChange;
 			platformView.QueryTextSubmit += OnQueryTextSubmit;
 		}
 
 		protected override void DisconnectHandler(SearchView platformView)
 		{
+			FocusListener.Handler = null;
+			platformView.SetOnQueryTextFocusChangeListener(null);
+
 			platformView.QueryTextChange -= OnQueryTextChange;
 			platformView.QueryTextSubmit -= OnQueryTextSubmit;
 		}
@@ -108,6 +114,17 @@ namespace Microsoft.Maui.Handlers
 			handler.PlatformView?.UpdateCancelButtonColor(searchBar);
 		}
 
+		public static void MapKeyboard(ISearchBarHandler handler, ISearchBar searchBar)
+		{
+			handler.PlatformView?.UpdateKeyboard(searchBar);
+		}
+
+		public static void MapFocus(ISearchBarHandler handler, ISearchBar searchBar, object? args)
+		{
+			if (args is FocusRequest request)
+				handler.QueryEditor?.Focus(request);
+		}
+
 		void OnQueryTextSubmit(object? sender, QueryTextSubmitEventArgs e)
 		{
 			VirtualView.SearchButtonPressed();
@@ -118,6 +135,22 @@ namespace Microsoft.Maui.Handlers
 		{
 			VirtualView.UpdateText(e.NewText);
 			e.Handled = true;
+		}
+
+		class FocusChangeListener : Java.Lang.Object, SearchView.IOnFocusChangeListener
+		{
+			public SearchBarHandler? Handler { get; set; }
+
+			public void OnFocusChange(View? v, bool hasFocus)
+			{
+				if (Handler == null)
+					return;
+
+				var virtualView = Handler.VirtualView;
+
+				if (virtualView != null)
+					virtualView.IsFocused = hasFocus;
+			}
 		}
 	}
 }

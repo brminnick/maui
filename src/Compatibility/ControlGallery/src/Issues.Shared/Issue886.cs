@@ -4,7 +4,7 @@ using Microsoft.Maui.Controls.CustomAttributes;
 using Microsoft.Maui.Controls.Internals;
 using Microsoft.Maui.Controls.Maps;
 
-namespace Microsoft.Maui.Controls.Compatibility.ControlGallery.Issues
+namespace Microsoft.Maui.Controls.ControlGallery.Issues
 {
 	[Preserve(AllMembers = true)]
 	[Issue(IssueTracker.Github, 886, "Map scrolling problems", PlatformAffected.Android)]
@@ -42,13 +42,13 @@ namespace Microsoft.Maui.Controls.Compatibility.ControlGallery.Issues
 			isScrollEnabledSwitch.Toggled += (sender, e) =>
 			{
 				isScrollEnabledLabelOn.Text = e.Value.ToString();
-				map.HasScrollEnabled = e.Value;
+				map.IsScrollEnabled = e.Value;
 			};
 
 			isZoomEnabledSwitch.Toggled += (sender, e) =>
 			{
 				isZoomEnabledLabelOn.Text = e.Value.ToString();
-				map.HasZoomEnabled = e.Value;
+				map.IsZoomEnabled = e.Value;
 			};
 
 			Content = new StackLayout

@@ -3,13 +3,14 @@
 using Microsoft.Maui.Controls.CustomAttributes;
 using Microsoft.Maui.Controls.Internals;
 using Microsoft.Maui.Controls.Maps;
+using Microsoft.Maui.Maps;
 
 #if UITEST
 using Xamarin.UITest;
 using NUnit.Framework;
 #endif
 
-namespace Microsoft.Maui.Controls.Compatibility.ControlGallery.Issues
+namespace Microsoft.Maui.Controls.ControlGallery.Issues
 {
 	[Preserve(AllMembers = true)]
 	[Issue(IssueTracker.None, 0, "IsShowingUser renderes as pin instead of dot")]
@@ -17,7 +18,7 @@ namespace Microsoft.Maui.Controls.Compatibility.ControlGallery.Issues
 	{
 		protected override void Init()
 		{
-			var map = new Map(MapSpan.FromCenterAndRadius(new Position(37.79, -122.4), Distance.FromMiles(2)))
+			var map = new Map(MapSpan.FromCenterAndRadius(new Devices.Sensors.Location(37.79, -122.4), Distance.FromMiles(2)))
 			{
 				AutomationId = "FormsMap",
 				IsShowingUser = true

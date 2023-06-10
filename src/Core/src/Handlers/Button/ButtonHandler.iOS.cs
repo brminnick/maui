@@ -1,5 +1,6 @@
-using System;
+﻿using System;
 using System.Threading.Tasks;
+using Microsoft.Maui.Graphics;
 using UIKit;
 
 namespace Microsoft.Maui.Handlers
@@ -18,23 +19,52 @@ namespace Microsoft.Maui.Handlers
 			return button;
 		}
 
+		readonly ButtonEventProxy _proxy = new ButtonEventProxy();
+
 		protected override void ConnectHandler(UIButton platformView)
 		{
-			platformView.TouchUpInside += OnButtonTouchUpInside;
-			platformView.TouchUpOutside += OnButtonTouchUpOutside;
-			platformView.TouchDown += OnButtonTouchDown;
+			_proxy.Connect(VirtualView, platformView);
 
 			base.ConnectHandler(platformView);
 		}
 
 		protected override void DisconnectHandler(UIButton platformView)
 		{
-			platformView.TouchUpInside -= OnButtonTouchUpInside;
-			platformView.TouchUpOutside -= OnButtonTouchUpOutside;
-			platformView.TouchDown -= OnButtonTouchDown;
+			_proxy.Disconnect(platformView);
 
 			base.DisconnectHandler(platformView);
 		}
+
+#if MACCATALYST
+		//TODO: make this public on NET8
+		internal static void MapBackground(IButtonHandler handler, IButton button)
+		{
+			//If this is a Mac optimized interface
+			if (OperatingSystem.IsIOSVersionAtLeast(15) && UIDevice.CurrentDevice.UserInterfaceIdiom == UIUserInterfaceIdiom.Mac)
+			{
+				var config = handler.PlatformView?.Configuration ?? UIButtonConfiguration.BorderedButtonConfiguration;
+				if (button?.Background is Paint paint)
+				{
+					if (paint is SolidPaint solidPaint)
+					{
+						Color backgroundColor = solidPaint.Color;
+
+						if (backgroundColor == null)
+							config.BaseBackgroundColor = ColorExtensions.BackgroundColor;
+						else
+							config.BaseBackgroundColor = backgroundColor.ToPlatform();
+
+					}
+				}
+				if (handler.PlatformView != null)
+					handler.PlatformView.Configuration = config;
+			}
+			else
+			{
+				handler.PlatformView?.UpdateBackground(button);
+			}
+		}
+#endif
 
 		public static void MapStrokeColor(IButtonHandler handler, IButtonStroke buttonStroke)
 		{
@@ -61,7 +91,19 @@ namespace Microsoft.Maui.Handlers
 
 		public static void MapTextColor(IButtonHandler handler, ITextStyle button)
 		{
-			handler.PlatformView?.UpdateTextColor(button);
+			//If this is a Mac optimized interface
+			if (OperatingSystem.IsIOSVersionAtLeast(15) && UIDevice.CurrentDevice.UserInterfaceIdiom == UIUserInterfaceIdiom.Mac)
+			{
+				var config = handler.PlatformView?.Configuration ?? UIButtonConfiguration.BorderedButtonConfiguration;
+				if (button?.TextColor != null && handler.PlatformView != null)
+					config.BaseForegroundColor = button?.TextColor.ToPlatform();
+				if (handler.PlatformView != null)
+					handler.PlatformView.Configuration = config;
+			}
+			else
+			{
+				handler.PlatformView?.UpdateTextColor(button);
+			}
 		}
 
 		public static void MapCharacterSpacing(IButtonHandler handler, ITextStyle button)
@@ -122,20 +164,48 @@ namespace Microsoft.Maui.Handlers
 			}
 		}
 
-		void OnButtonTouchUpInside(object? sender, EventArgs e)
+		class ButtonEventProxy
 		{
-			VirtualView?.Released();
-			VirtualView?.Clicked();
-		}
+			WeakReference<IButton>? _virtualView;
 
-		void OnButtonTouchUpOutside(object? sender, EventArgs e)
-		{
-			VirtualView?.Released();
-		}
+			IButton? VirtualView => _virtualView is not null && _virtualView.TryGetTarget(out var v) ? v : null;
 
-		void OnButtonTouchDown(object? sender, EventArgs e)
-		{
-			VirtualView?.Pressed();
+			public void Connect(IButton virtualView, UIButton platformView)
+			{
+				_virtualView = new(virtualView);
+
+				platformView.TouchUpInside += OnButtonTouchUpInside;
+				platformView.TouchUpOutside += OnButtonTouchUpOutside;
+				platformView.TouchDown += OnButtonTouchDown;
+			}
+
+			public void Disconnect(UIButton platformView)
+			{
+				_virtualView = null;
+
+				platformView.TouchUpInside -= OnButtonTouchUpInside;
+				platformView.TouchUpOutside -= OnButtonTouchUpOutside;
+				platformView.TouchDown -= OnButtonTouchDown;
+			}
+
+			void OnButtonTouchUpInside(object? sender, EventArgs e)
+			{
+				if (VirtualView is IButton virtualView)
+				{
+					virtualView.Released();
+					virtualView.Clicked();
+				}
+			}
+
+			void OnButtonTouchUpOutside(object? sender, EventArgs e)
+			{
+				VirtualView?.Released();
+			}
+
+			void OnButtonTouchDown(object? sender, EventArgs e)
+			{
+				VirtualView?.Pressed();
+			}
 		}
 	}
 }

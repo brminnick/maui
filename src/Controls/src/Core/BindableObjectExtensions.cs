@@ -1,12 +1,29 @@
+#nullable disable
 using System;
 using System.Collections.Generic;
 using Microsoft.Maui.Graphics;
 
 namespace Microsoft.Maui.Controls
 {
-	/// <include file="../../docs/Microsoft.Maui.Controls/BindableObjectExtensions.xml" path="Type[@FullName='Microsoft.Maui.Controls.BindableObjectExtensions']/Docs" />
+	/// <include file="../../docs/Microsoft.Maui.Controls/BindableObjectExtensions.xml" path="Type[@FullName='Microsoft.Maui.Controls.BindableObjectExtensions']/Docs/*" />
 	public static class BindableObjectExtensions
 	{
+		internal static void RefreshPropertyValue(this BindableObject self, BindableProperty property, object value)
+		{
+			var ctx = self.GetContext(property);
+			if (ctx?.Binding is not null)
+			{
+				// support bound properties
+				if (!ctx.Attributes.HasFlag(BindableObject.BindableContextAttributes.IsBeingSet))
+					ctx.Binding.Apply(false);
+			}
+			else
+			{
+				// support normal/code properties
+				self.SetValue(property, value);
+			}
+		}
+
 		internal static void PropagateBindingContext<T>(this BindableObject self, IEnumerable<T> children)
 		{
 			PropagateBindingContext(self, children, BindableObject.SetInheritedBindingContext);
@@ -29,7 +46,7 @@ namespace Microsoft.Maui.Controls
 			}
 		}
 
-		/// <include file="../../docs/Microsoft.Maui.Controls/BindableObjectExtensions.xml" path="//Member[@MemberName='SetBinding']/Docs" />
+		/// <include file="../../docs/Microsoft.Maui.Controls/BindableObjectExtensions.xml" path="//Member[@MemberName='SetBinding']/Docs/*" />
 		public static void SetBinding(this BindableObject self, BindableProperty targetProperty, string path, BindingMode mode = BindingMode.Default, IValueConverter converter = null,
 									  string stringFormat = null)
 		{
@@ -42,7 +59,6 @@ namespace Microsoft.Maui.Controls
 			self.SetBinding(targetProperty, binding);
 		}
 
-		/// <include file="../../docs/Microsoft.Maui.Controls/BindableObjectExtensions.xml" path="//Member[@MemberName='GetPropertyIfSet']/Docs" />
 		public static T GetPropertyIfSet<T>(this BindableObject bindableObject, BindableProperty bindableProperty, T returnIfNotSet)
 		{
 			if (bindableObject == null)
@@ -54,10 +70,48 @@ namespace Microsoft.Maui.Controls
 			return returnIfNotSet;
 		}
 
-		/// <include file="../../docs/Microsoft.Maui.Controls/BindableObjectExtensions.xml" path="//Member[@MemberName='SetAppTheme']/Docs" />
+		internal static bool TrySetDynamicThemeColor(
+			this BindableObject bindableObject,
+			string resourceKey,
+			BindableProperty bindableProperty,
+			out object outerColor)
+		{
+			if (Application.Current.TryGetResource(resourceKey, out outerColor))
+			{
+				bindableObject.SetDynamicResource(bindableProperty, resourceKey);
+				return true;
+			}
+
+			return false;
+		}
+
+		internal static bool TrySetAppTheme(
+			this BindableObject self,
+			string lightResourceKey,
+			string darkResourceKey,
+			BindableProperty bindableProperty,
+			Brush defaultDark,
+			Brush defaultLight,
+			out object outerLight,
+			out object outerDark)
+		{
+			if (!Application.Current.TryGetResource(lightResourceKey, out outerLight))
+			{
+				outerLight = defaultLight;
+			}
+
+			if (!Application.Current.TryGetResource(darkResourceKey, out outerDark))
+			{
+				outerDark = defaultDark;
+			}
+
+			self.SetAppTheme(bindableProperty, outerLight, outerDark);
+			return (Brush)outerLight != defaultLight || (Brush)outerDark != defaultDark;
+		}
+
 		public static void SetAppTheme<T>(this BindableObject self, BindableProperty targetProperty, T light, T dark) => self.SetBinding(targetProperty, new AppThemeBinding { Light = light, Dark = dark });
 
-		/// <include file="../../docs/Microsoft.Maui.Controls/BindableObjectExtensions.xml" path="//Member[@MemberName='SetAppThemeColor']/Docs" />
+		/// <include file="../../docs/Microsoft.Maui.Controls/BindableObjectExtensions.xml" path="//Member[@MemberName='SetAppThemeColor']/Docs/*" />
 		public static void SetAppThemeColor(this BindableObject self, BindableProperty targetProperty, Color light, Color dark) => SetAppTheme(self, targetProperty, light, dark);
 	}
 }

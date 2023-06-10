@@ -101,9 +101,6 @@ namespace Microsoft.Maui.Graphics
 			if (ShapeView == null || ShapeView.Shape == null)
 				return;
 
-			if (!path.Closed)
-				return;
-
 			canvas.SaveState();
 
 			canvas.FillColor = Colors.Transparent;
@@ -111,7 +108,7 @@ namespace Microsoft.Maui.Graphics
 			ClipPath(canvas, path);
 
 			// Set Fill
-			var fillPaint = ShapeView.Fill;
+			var fillPaint = ShapeView.Fill ?? ShapeView.Background;
 
 			if (fillPaint != null)
 				canvas.SetFillPaint(fillPaint, dirtyRect);

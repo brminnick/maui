@@ -14,13 +14,7 @@ namespace Microsoft.Maui.Handlers
 				throw new InvalidOperationException($"{nameof(VirtualView)} must be set to create a LayoutViewGroup");
 			}
 
-			var view = new LayoutView
-			{
-				CrossPlatformMeasure = VirtualView.CrossPlatformMeasure,
-				CrossPlatformArrange = VirtualView.CrossPlatformArrange,
-			};
-
-			return view;
+			return new();
 		}
 
 		public override void SetVirtualView(IView view)
@@ -32,8 +26,6 @@ namespace Microsoft.Maui.Handlers
 			_ = MauiContext ?? throw new InvalidOperationException($"{nameof(MauiContext)} should have been set by base class.");
 
 			PlatformView.View = view;
-			PlatformView.CrossPlatformMeasure = VirtualView.CrossPlatformMeasure;
-			PlatformView.CrossPlatformArrange = VirtualView.CrossPlatformArrange;
 
 			// Remove any previous children 
 			PlatformView.ClearSubviews();
@@ -51,7 +43,13 @@ namespace Microsoft.Maui.Handlers
 			_ = MauiContext ?? throw new InvalidOperationException($"{nameof(MauiContext)} should have been set by base class.");
 
 			var targetIndex = VirtualView.GetLayoutHandlerIndex(child);
-			PlatformView.InsertSubview(child.ToPlatform(MauiContext), targetIndex);
+			var childPlatformView = child.ToPlatform(MauiContext);
+			PlatformView.InsertSubview(childPlatformView, targetIndex);
+
+			if (child.FlowDirection == FlowDirection.MatchParent)
+			{
+				childPlatformView.UpdateFlowDirection(child);
+			}
 		}
 
 		public void Remove(IView child)
@@ -77,7 +75,13 @@ namespace Microsoft.Maui.Handlers
 			_ = MauiContext ?? throw new InvalidOperationException($"{nameof(MauiContext)} should have been set by base class.");
 
 			var targetIndex = VirtualView.GetLayoutHandlerIndex(child);
-			PlatformView.InsertSubview(child.ToPlatform(MauiContext), targetIndex);
+			var childPlatformView = child.ToPlatform(MauiContext);
+			PlatformView.InsertSubview(childPlatformView, targetIndex);
+
+			if (child.FlowDirection == FlowDirection.MatchParent)
+			{
+				childPlatformView.UpdateFlowDirection(child);
+			}
 		}
 
 		public void Update(int index, IView child)

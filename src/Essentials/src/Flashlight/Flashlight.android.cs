@@ -21,7 +21,11 @@ namespace Microsoft.Maui.Devices
 		static readonly object locker = new object();
 
 #pragma warning disable CS0618
+#pragma warning disable CA1416 // Validate platform compatibility
+#pragma warning disable CA1422 // Validate platform compatibility
 		Camera camera;
+#pragma warning restore CA1416 // Validate platform compatibility
+#pragma warning restore CA1422 // Validate platform compatibility
 #pragma warning restore CS0618
 		SurfaceTexture surface;
 
@@ -29,6 +33,12 @@ namespace Microsoft.Maui.Devices
 			=> PlatformUtils.HasSystemFeature(PackageManager.FeatureCameraFlash);
 
 		internal bool AlwaysUseCameraApi { get; set; } = false;
+
+		/// <summary>
+		/// Checks if the flashlight is available and can be turned on or off.
+		/// </summary>
+		/// <returns><see langword="true"/> when the flashlight is available, or <see langword="false"/> when not</returns>
+		public Task<bool> IsSupportedAsync() => Task.FromResult(IsSupported);
 
 		public async Task TurnOnAsync()
 		{
@@ -85,10 +95,14 @@ namespace Microsoft.Maui.Devices
 								surface = new SurfaceTexture(0);
 
 #pragma warning disable CS0618 // Camera types are deprecated in Android 10+
+#pragma warning disable CA1416 // Validate platform compatibility
+#pragma warning disable CA1422 // Validate platform compatibility
 							camera = Camera.Open();
+
 
 							// Nexus 5 and some devices require a preview texture
 							camera.SetPreviewTexture(surface);
+
 						}
 
 						var param = camera.GetParameters();
@@ -107,10 +121,12 @@ namespace Microsoft.Maui.Devices
 							camera.StopPreview();
 							camera.Release();
 							camera.Dispose();
-#pragma warning restore CS0618 // Type or member is obsolete
 							camera = null;
 							surface.Dispose();
 							surface = null;
+#pragma warning restore CS0618 // Type or member is obsolete
+#pragma warning restore CA1416 // Validate platform compatibility
+#pragma warning restore CA1422 // Validate platform compatibility
 						}
 					}
 				}

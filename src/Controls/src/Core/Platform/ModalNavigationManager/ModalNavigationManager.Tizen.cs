@@ -1,57 +1,59 @@
 ﻿#nullable enable
 
 using System.Threading.Tasks;
-using Microsoft.Maui;
+using Tizen.UIExtensions.NUI;
 
 namespace Microsoft.Maui.Controls.Platform
 {
 	internal partial class ModalNavigationManager
 	{
-		ModalStack _modalStack => WindowMauiContext.GetModalStack();
-		IPageController CurrentPageController => _navModel.CurrentPage;
+		NavigationStack _modalStack => WindowMauiContext.GetModalStack();
+		IPageController CurrentPageController => CurrentPage!;
+
+		Task SyncModalStackWhenPlatformIsReadyAsync() =>
+			SyncPlatformModalStackAsync();
+
+		bool IsModalPlatformReady => true;
 
 		partial void OnPageAttachedHandler()
 		{
 			WindowMauiContext.GetPlatformWindow().SetBackButtonPressedHandler(OnBackButtonPressed);
 		}
 
-		public Task<Page> PopModalAsync(bool animated)
+		async Task<Page> PopModalPlatformAsync(bool animated)
 		{
-			Page modal = _navModel.PopModal();
+			Page modal = CurrentPlatformModalPage;
+			_platformModalPages.Remove(modal);
+
 			((IPageController)modal).SendDisappearing();
-			var source = new TaskCompletionSource<Page>();
 
 			var modalRenderer = modal.Handler as IPlatformViewHandler;
-			if (modalRenderer != null)
+			if (modalRenderer is not null)
 			{
-				// TODO. Need to implement animated
-				_modalStack.Pop();
-				source.TrySetResult(modal);
+				await _modalStack.Pop(animated);
 				CurrentPageController?.SendAppearing();
+				(modal.Handler as IPlatformViewHandler)?.Dispose();
 			}
-			return source.Task;
+			return modal;
 		}
 
-		public Task PushModalAsync(Page modal, bool animated)
+		async Task PushModalPlatformAsync(Page modal, bool animated)
 		{
 			CurrentPageController?.SendDisappearing();
-			_navModel.PushModal(modal);
+			_platformModalPages.Add(modal);
 
 			var nativeView = modal.ToPlatform(WindowMauiContext);
 
-			_modalStack.Push(nativeView);
+			await _modalStack.Push(nativeView, animated);
 
 			// Verify that the modal is still on the stack
-			if (_navModel.CurrentPage == modal)
+			if (CurrentPage == modal)
 				((IPageController)modal).SendAppearing();
-
-			return Task.CompletedTask;
 		}
 
 		bool OnBackButtonPressed()
 		{
-			Page root = _navModel.LastRoot;
-			bool handled = root?.SendBackButtonPressed() ?? false;
+			bool handled = CurrentPage?.SendBackButtonPressed() ?? false;
 
 			return handled;
 		}

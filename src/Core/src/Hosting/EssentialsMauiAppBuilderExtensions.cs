@@ -62,10 +62,6 @@ namespace Microsoft.Maui.Hosting
 					}));
 #elif WINDOWS
 				life.AddWindows(windows => windows
-					.OnPlatformMessage((window, args) =>
-					{
-						ApplicationModel.Platform.OnWindowMessage(args.Hwnd, args.MessageId, args.WParam, args.LParam);
-					})
 					.OnActivated((window, args) =>
 					{
 						ApplicationModel.Platform.OnActivated(window, args);
@@ -73,6 +69,10 @@ namespace Microsoft.Maui.Hosting
 					.OnLaunched((application, args) =>
 					{
 						ApplicationModel.Platform.OnLaunched(args);
+					})
+					.OnPlatformWindowSubclassed((window, context) =>
+					{
+						ApplicationModel.Platform.OnPlatformWindowInitialized(window);
 					}));
 #elif TIZEN
 

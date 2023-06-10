@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Maui;
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.Controls.Handlers;
+using Microsoft.Maui.Controls.Handlers.Compatibility;
 using Microsoft.Maui.DeviceTests.Stubs;
 using Microsoft.Maui.Handlers;
 using Microsoft.Maui.Hosting;
@@ -14,10 +15,15 @@ using Microsoft.Maui.Platform;
 using Xunit;
 
 
+#if IOS || MACCATALYST
+using FlyoutViewHandler = Microsoft.Maui.Controls.Handlers.Compatibility.PhoneFlyoutPageRenderer;
+#endif
+
+
 namespace Microsoft.Maui.DeviceTests
 {
 	[Category(TestCategory.FlyoutPage)]
-	public partial class FlyoutPageTests : HandlerTestBase
+	public partial class FlyoutPageTests : ControlsHandlerTestBase
 	{
 		void SetupBuilder()
 		{
@@ -25,25 +31,78 @@ namespace Microsoft.Maui.DeviceTests
 			{
 				builder.ConfigureMauiHandlers(handlers =>
 				{
+					handlers.AddHandler(typeof(Controls.Label), typeof(LabelHandler));
 					handlers.AddHandler(typeof(Controls.Toolbar), typeof(ToolbarHandler));
 					handlers.AddHandler(typeof(FlyoutPage), typeof(FlyoutViewHandler));
-					handlers.AddHandler(typeof(Controls.NavigationPage), typeof(NavigationViewHandler));
+#if IOS || MACCATALYST
+					handlers.AddHandler(typeof(NavigationPage), typeof(NavigationRenderer));
+#else
+					handlers.AddHandler(typeof(NavigationPage), typeof(NavigationViewHandler));
+#endif
 					handlers.AddHandler<Page, PageHandler>();
+					handlers.AddHandler<Frame, FrameRenderer>();
 					handlers.AddHandler<Controls.Window, WindowHandlerStub>();
 				});
 			});
 		}
-#if !IOS
 
-		[Fact(DisplayName = "FlyoutPage With Toolbar")]
-		public async Task FlyoutPageWithToolbar()
+		[Theory]
+		[ClassData(typeof(FlyoutPageLayoutBehaviorTestCases))]
+		public async Task PoppingFlyoutPageDoesntCrash(Type flyoutPageType)
 		{
 			SetupBuilder();
-			var flyoutPage = new FlyoutPage()
+			var navPage = new NavigationPage(new ContentPage()) { Title = "App Page" };
+
+			await CreateHandlerAndAddToWindow<WindowHandlerStub>(new Window(navPage), async (handler) =>
 			{
-				Detail = new NavigationPage(new ContentPage() { Title = "Detail" }),
-				Flyout = new ContentPage() { Title = "Flyout" }
-			};
+				var flyoutPage = CreateFlyoutPage(
+					flyoutPageType,
+					new NavigationPage(new ContentPage() { Content = new Frame(), Title = "Detail" }),
+					new ContentPage() { Title = "Flyout" });
+
+				await navPage.PushAsync(flyoutPage);
+				await navPage.PopAsync();
+			});
+		}
+
+		[Theory]
+		[ClassData(typeof(FlyoutPageLayoutBehaviorTestCases))]
+		public async Task SwappingDetailPageWorksForSplitFlyoutBehavior(Type flyoutPageType)
+		{
+			SetupBuilder();
+
+			var flyoutPage = CreateFlyoutPage(
+					flyoutPageType,
+					new NavigationPage(new ContentPage() { Content = new Frame(), Title = "Detail" }),
+					new ContentPage() { Title = "Flyout" });
+
+			await CreateHandlerAndAddToWindow<WindowHandlerStub>(new Window(flyoutPage), async (handler) =>
+			{
+				var currentDetailPage = flyoutPage.Detail;
+
+				// Set with new page
+				var navPage = new NavigationPage(new ContentPage()) { Title = "App Page" };
+				flyoutPage.Detail = navPage;
+				await OnNavigatedToAsync(navPage);
+
+				// Set back to previous page
+				flyoutPage.Detail = currentDetailPage;
+				await OnNavigatedToAsync(currentDetailPage);
+			});
+		}
+
+
+		[Theory(DisplayName = "FlyoutPage With Toolbar")]
+		[ClassData(typeof(FlyoutPageLayoutBehaviorTestCases))]
+		public async Task FlyoutPageWithToolbar(Type flyoutPageType)
+		{
+			SetupBuilder();
+
+			var flyoutPage =
+				CreateFlyoutPage(
+					flyoutPageType,
+					new NavigationPage(new ContentPage() { Title = "Detail" }),
+					new ContentPage() { Title = "Flyout" });
 
 			await CreateHandlerAndAddToWindow<FlyoutViewHandler>(flyoutPage, (handler) =>
 			{
@@ -53,15 +112,17 @@ namespace Microsoft.Maui.DeviceTests
 			});
 		}
 
-		[Fact(DisplayName = "Details View Updates w/NavigationPage")]
-		public async Task DetailsViewUpdatesWithNavigationPage()
+		[Theory(DisplayName = "Details View Updates w/NavigationPage")]
+		[ClassData(typeof(FlyoutPageLayoutBehaviorTestCases))]
+		public async Task DetailsViewUpdatesWithNavigationPage(Type flyoutPageType)
 		{
 			SetupBuilder();
-			var flyoutPage = new FlyoutPage()
-			{
-				Detail = new NavigationPage(new ContentPage() { Title = "Detail" }),
-				Flyout = new ContentPage() { Title = "Flyout" }
-			};
+
+			var flyoutPage =
+				CreateFlyoutPage(
+					flyoutPageType,
+					new NavigationPage(new ContentPage() { Title = "Detail" }),
+					new ContentPage() { Title = "Flyout" });
 
 			await CreateHandlerAndAddToWindow<FlyoutViewHandler>(flyoutPage, async (handler) =>
 			{
@@ -74,15 +135,16 @@ namespace Microsoft.Maui.DeviceTests
 			});
 		}
 
-		[Fact(DisplayName = "Details View Updates")]
-		public async Task DetailsViewUpdates()
+		[Theory(DisplayName = "Details View Updates")]
+		[ClassData(typeof(FlyoutPageLayoutBehaviorTestCases))]
+		public async Task DetailsViewUpdates(Type flyoutPageType)
 		{
 			SetupBuilder();
-			var flyoutPage = new FlyoutPage()
-			{
-				Detail = new ContentPage() { Title = "Detail" },
-				Flyout = new ContentPage() { Title = "Flyout" }
-			};
+			var flyoutPage =
+				CreateFlyoutPage(
+					flyoutPageType,
+					new ContentPage() { Title = "Detail" },
+					new ContentPage() { Title = "Flyout" });
 
 			await CreateHandlerAndAddToWindow<FlyoutViewHandler>(flyoutPage, async (handler) =>
 			{
@@ -101,6 +163,73 @@ namespace Microsoft.Maui.DeviceTests
 				Assert.Null(FindPlatformFlyoutView(detailView));
 			});
 		}
-#endif
+
+		FlyoutPage CreateFlyoutPage(Type type, Page detail, Page flyout)
+		{
+			var flyoutPage = (FlyoutPage)Activator.CreateInstance(type);
+			flyoutPage.Detail = detail;
+			flyoutPage.Flyout = flyout;
+			return flyoutPage;
+		}
+
+		[Theory]
+		[InlineData(false)]
+		[InlineData(true)]
+		public async Task DetailsPageMeasuresCorrectlyInSplitMode(bool isRtl)
+		{
+			SetupBuilder();
+			var flyoutLabel = new Label() { Text = "Content" };
+			var flyoutPage = await InvokeOnMainThreadAsync(() => new FlyoutPage()
+			{
+				FlyoutLayoutBehavior = FlyoutLayoutBehavior.Split,
+				Detail = new ContentPage()
+				{
+					Title = "Detail",
+					Content = new Label()
+				},
+				Flyout = new ContentPage()
+				{
+					Title = "Flyout",
+					Content = flyoutLabel
+				},
+				FlowDirection = (isRtl) ? FlowDirection.RightToLeft : FlowDirection.LeftToRight
+			});
+
+			await CreateHandlerAndAddToWindow<FlyoutViewHandler>(flyoutPage, async (handler) =>
+			{
+				if (!CanDeviceDoSplitMode(flyoutPage))
+					return;
+
+				await AssertionExtensions.Wait(() => flyoutPage.Flyout.GetBoundingBox().Width > 0);
+
+				var detailBounds = flyoutPage.Detail.GetBoundingBox();
+				var flyoutBounds = flyoutPage.Flyout.GetBoundingBox();
+				var windowBounds = flyoutPage.GetBoundingBox();
+
+				Assert.True(detailBounds.Height <= windowBounds.Height, $"Details is measuring too high. Details - {detailBounds} Window - {windowBounds}");
+				Assert.True(flyoutBounds.Height <= windowBounds.Height, $"Flyout is measuring too high Flyout - {flyoutBounds} Window - {windowBounds}");
+				Assert.True(flyoutBounds.Width + detailBounds.Width <= windowBounds.Width,
+					$"Flyout and Details width exceed the width of the window. Details - {detailBounds}  Flyout - {flyoutBounds} Window - {windowBounds}");
+
+				Assert.True(detailBounds.X + detailBounds.Width <= windowBounds.Width,
+					$"Right edge of Details View is off the screen. Details - {detailBounds} Window - {windowBounds}");
+
+				if (isRtl)
+				{
+					Assert.Equal(flyoutBounds.X, detailBounds.Width);
+				}
+				else
+				{
+					Assert.Equal(flyoutBounds.Width, detailBounds.X);
+				}
+
+				Assert.Equal(detailBounds.Width, windowBounds.Width - flyoutBounds.Width);
+			});
+		}
+
+		bool CanDeviceDoSplitMode(FlyoutPage page)
+		{
+			return ((IFlyoutPageController)page).ShouldShowSplitMode;
+		}
 	}
 }

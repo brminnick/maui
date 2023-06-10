@@ -8,7 +8,7 @@ using Xunit;
 namespace Microsoft.Maui.DeviceTests
 {
 	[Category(TestCategory.Editor)]
-	public partial class EditorHandlerTests : HandlerTestBase<EditorHandler, EditorStub>
+	public partial class EditorHandlerTests : CoreHandlerTestBase<EditorHandler, EditorStub>
 	{
 		[Fact(DisplayName = "Text Initializes Correctly")]
 		public async Task TextInitializesCorrectly()
@@ -93,8 +93,8 @@ namespace Microsoft.Maui.DeviceTests
 		}
 
 		[Theory(DisplayName = "PlaceholderColor Updates Correctly")]
-		[InlineData(0xFF0000, 0x0000FF)]
-		[InlineData(0x0000FF, 0xFF0000)]
+		[InlineData(0xFFFF0000, 0xFF0000FF)]
+		[InlineData(0xFF0000FF, 0xFFFF0000)]
 		public async Task PlaceholderColorUpdatesCorrectly(uint setValue, uint unsetValue)
 		{
 			var editor = new EditorStub
@@ -370,23 +370,53 @@ namespace Microsoft.Maui.DeviceTests
 			await ValidatePropertyInitValue(editor, () => expected, GetNativeIsChatKeyboard, expected);
 		}
 
+		[Theory(DisplayName = "Vertical TextAlignment Initializes Correctly")]
+		[InlineData(TextAlignment.Start)]
+		[InlineData(TextAlignment.Center)]
+		[InlineData(TextAlignment.End)]
+		public async Task VerticalTextAlignmentInitializesCorrectly(TextAlignment textAlignment)
+		{
+			var editor = new EditorStub
+			{
+				VerticalTextAlignment = textAlignment
+			};
+
+			var platformAlignment = GetNativeVerticalTextAlignment(textAlignment);
+
+			var values =
+				await AttachAndRun(editor, (handler) =>
+					new
+					{
+						ViewValue = editor.VerticalTextAlignment,
+						PlatformViewValue = GetNativeVerticalTextAlignment(handler)
+					});
+
+
+			Assert.Equal(textAlignment, values.ViewValue);
+			Assert.Equal(platformAlignment, values.PlatformViewValue);
+		}
+
+		[Category(TestCategory.Editor)]
+		public class EditorTextStyleTests : TextStyleHandlerTests<EditorHandler, EditorStub>
+		{
+		}
+
+		[Category(TestCategory.Editor)]
+		public class EditorFocusTests : FocusHandlerTests<EditorHandler, EditorStub, VerticalStackLayoutStub>
+		{
+		}
+
 		[Category(TestCategory.Editor)]
 		public class EditorTextInputTests : TextInputHandlerTests<EditorHandler, EditorStub>
 		{
-			protected override void SetNativeText(EditorHandler editorHandler, string text)
-			{
+			protected override void SetNativeText(EditorHandler editorHandler, string text) =>
 				EditorHandlerTests.SetNativeText(editorHandler, text);
-			}
 
-			protected override int GetCursorStartPosition(EditorHandler editorHandler)
-			{
-				return EditorHandlerTests.GetCursorStartPosition(editorHandler);
-			}
+			protected override int GetCursorStartPosition(EditorHandler editorHandler) =>
+				EditorHandlerTests.GetCursorStartPosition(editorHandler);
 
-			protected override void UpdateCursorStartPosition(EditorHandler editorHandler, int position)
-			{
+			protected override void UpdateCursorStartPosition(EditorHandler editorHandler, int position) =>
 				EditorHandlerTests.UpdateCursorStartPosition(editorHandler, position);
-			}
 		}
 	}
 }

@@ -1,3 +1,4 @@
+#nullable disable
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -12,8 +13,10 @@ namespace Microsoft.Maui.Controls.Compatibility
 	[ContentProperty(nameof(Children))]
 	public class AbsoluteLayout : Layout<View>, IElementConfiguration<AbsoluteLayout>
 	{
+		/// <summary>Bindable property for attached property <c>LayoutFlags</c>.</summary>
 		public static readonly BindableProperty LayoutFlagsProperty = BindableProperty.CreateAttached("LayoutFlags", typeof(AbsoluteLayoutFlags), typeof(AbsoluteLayout), AbsoluteLayoutFlags.None);
 
+		/// <summary>Bindable property for attached property <c>LayoutBounds</c>.</summary>
 		public static readonly BindableProperty LayoutBoundsProperty = BindableProperty.CreateAttached("LayoutBounds", typeof(Rect), typeof(AbsoluteLayout), new Rect(0, 0, AutoSize, AutoSize));
 
 		readonly AbsoluteElementCollection _children;
@@ -27,6 +30,7 @@ namespace Microsoft.Maui.Controls.Compatibility
 				new PlatformConfigurationRegistry<AbsoluteLayout>(this));
 		}
 
+		/// <inheritdoc/>
 		public IPlatformElementConfiguration<T, AbsoluteLayout> On<T>() where T : IConfigPlatform
 		{
 			return _platformConfigurationRegistry.Value.On<T>();

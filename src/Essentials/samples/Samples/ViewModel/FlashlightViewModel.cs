@@ -1,6 +1,6 @@
 using System;
+using System.Threading.Tasks;
 using System.Windows.Input;
-using Microsoft.Maui;
 using Microsoft.Maui.ApplicationModel;
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.Devices;
@@ -15,6 +15,7 @@ namespace Samples.ViewModel
 		public FlashlightViewModel()
 		{
 			ToggleCommand = new Command(OnToggle);
+			App.Current.Dispatcher.Dispatch(async () => await InitViewModel());
 		}
 
 		public ICommand ToggleCommand { get; }
@@ -29,6 +30,11 @@ namespace Samples.ViewModel
 		{
 			get => isSupported;
 			set => SetProperty(ref isSupported, value);
+		}
+
+		async Task InitViewModel()
+		{
+			IsSupported = await Flashlight.IsSupportedAsync();
 		}
 
 		public override void OnDisappearing()

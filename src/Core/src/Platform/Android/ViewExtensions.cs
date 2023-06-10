@@ -7,7 +7,10 @@ using Android.OS;
 using Android.Util;
 using Android.Views;
 using Android.Widget;
+using AndroidX.AppCompat.Widget;
+using AndroidX.ConstraintLayout.Helper.Widget;
 using AndroidX.Core.Content;
+using AndroidX.Window.Layout;
 using Microsoft.Maui.ApplicationModel;
 using Microsoft.Maui.Graphics;
 using Microsoft.Maui.Primitives;
@@ -62,7 +65,12 @@ namespace Microsoft.Maui.Platform
 
 		public static void Focus(this AView platformView, FocusRequest request)
 		{
-			request.IsFocused = true;
+			platformView?.Focus(request, null);
+		}
+
+		internal static void Focus(this AView platformView, FocusRequest request, Action? focusRequested)
+		{
+			request.TrySetResult(true);
 
 			// Android does the actual focus/unfocus work on the main looper
 			// So in case we're setting the focus in response to another control's un-focusing,
@@ -81,6 +89,9 @@ namespace Microsoft.Maui.Platform
 					return;
 
 				platformView?.RequestFocus();
+
+				if (platformView?.RequestFocus() == true)
+					focusRequested?.Invoke();
 			}
 		}
 
@@ -134,7 +145,7 @@ namespace Microsoft.Maui.Platform
 			{
 				if (context.Theme.ResolveAttribute(global::Android.Resource.Attribute.WindowBackground, background, true))
 				{
-					string? type = context.Resources.GetResourceTypeName(background.ResourceId)?.ToLower();
+					string? type = context.Resources.GetResourceTypeName(background.ResourceId)?.ToLowerInvariant();
 
 					if (type != null)
 					{
@@ -163,14 +174,18 @@ namespace Microsoft.Maui.Platform
 		}
 
 		public static void UpdateBackground(this AView platformView, IView view) =>
-			platformView.UpdateBackground(view.Background);
+			platformView.UpdateBackground(view, false);
 
-		// TODO: NET7 make this public for net7.0
+		internal static void UpdateBackground(this AView platformView, IView view, bool treatTransparentAsNull) =>
+			platformView.UpdateBackground(view.Background, treatTransparentAsNull);
+
+		internal static void UpdateBackground(this TextView platformView, IView view) =>
+			UpdateBackground(platformView, view, true);
+
+		// TODO: NET8 make this public for NET8.0
 		internal static void UpdateBackground(this EditText platformView, IView view)
 		{
-			var paint = view.Background;
-
-			if (paint.IsNullOrEmpty())
+			if (platformView is null || platformView.Context is null)
 			{
 				return;
 			}
@@ -182,13 +197,48 @@ namespace Microsoft.Maui.Platform
 				mauiDrawable.Dispose();
 			}
 
-			var previousDrawable = platformView.Background;
-			var backgroundDrawable = paint!.ToDrawable(platformView.Context);
-			LayerDrawable layer = new LayerDrawable(new Drawable[] { backgroundDrawable!, previousDrawable! });
-			platformView.Background = layer;
+			if (platformView.Background is LayerDrawable layerDrawable)
+			{
+				platformView.Background = null;
+				layerDrawable.Dispose();
+			}
+
+			// Android will reset the padding when setting a Background drawable	
+			// So we need to reapply the padding after
+			var padLeft = platformView.PaddingLeft;
+			var padTop = platformView.PaddingTop;
+			var padRight = platformView.PaddingRight;
+			var padBottom = platformView.PaddingBottom;
+
+			var paint = view.Background;
+
+			Drawable? defaultBackgroundDrawable = ContextCompat.GetDrawable(platformView.Context, Resource.Drawable.abc_edit_text_material);
+
+			var previousDrawable = defaultBackgroundDrawable ?? platformView.Background;
+			var backgroundDrawable = paint.ToDrawable(platformView.Context);
+
+			if (previousDrawable is null)
+				platformView.Background = backgroundDrawable;
+			else
+			{
+				if (backgroundDrawable is null)
+					platformView.Background = previousDrawable;
+				else
+				{
+
+					LayerDrawable layer = new LayerDrawable(new Drawable[] { backgroundDrawable, previousDrawable });
+					platformView.Background = layer;
+				}
+			}
+
+			// Apply previous padding
+			platformView.SetPadding(padLeft, padTop, padRight, padBottom);
 		}
 
-		public static void UpdateBackground(this AView platformView, Paint? background)
+		public static void UpdateBackground(this AView platformView, Paint? background) =>
+			UpdateBackground(platformView, background, false);
+
+		internal static void UpdateBackground(this AView platformView, Paint? background, bool treatTransparentAsNull)
 		{
 			var paint = background;
 
@@ -201,7 +251,14 @@ namespace Microsoft.Maui.Platform
 					mauiDrawable.Dispose();
 				}
 
-				if (paint is SolidPaint solidPaint)
+				if (treatTransparentAsNull && paint.IsTransparent())
+				{
+					// For controls where android treats transparent as null it's more
+					// performant to just set the background to null instead of
+					// giving it a transparent color/drawable
+					platformView.Background = null;
+				}
+				else if (paint is SolidPaint solidPaint)
 				{
 					if (solidPaint.Color is Color backgroundColor)
 						platformView.SetBackgroundColor(backgroundColor.ToPlatform());
@@ -340,6 +397,12 @@ namespace Microsoft.Maui.Platform
 			}
 		}
 
+		public static void UpdateToolTip(this AView view, ToolTip? tooltip)
+		{
+			string? text = tooltip?.Content?.ToString();
+			TooltipCompat.SetTooltipText(view, text);
+		}
+
 		public static void RemoveFromParent(this AView view)
 		{
 			if (view != null)
@@ -441,8 +504,16 @@ namespace Microsoft.Maui.Platform
 				context.FromPixels((float)rect.Height()));
 		}
 
-		internal static bool IsLoaded(this View frameworkElement) =>
-			frameworkElement.IsAttachedToWindow;
+		internal static bool IsLoaded(this View frameworkElement)
+		{
+			if (frameworkElement == null)
+				return false;
+
+			if (frameworkElement.IsDisposed())
+				return false;
+
+			return frameworkElement.IsAttachedToWindow;
+		}
 
 		internal static IDisposable OnLoaded(this View frameworkElement, Action action)
 		{
@@ -564,25 +635,7 @@ namespace Microsoft.Maui.Platform
 			=> GetHostedWindow(view?.Handler?.PlatformView as View);
 
 		internal static IWindow? GetHostedWindow(this View? view)
-			=> GetWindowFromActivity(view?.Context?.GetActivity());
-
-		internal static IWindow? GetWindowFromActivity(this Android.App.Activity? activity)
-		{
-			if (activity is null)
-				return null;
-
-			var windows = WindowExtensions.GetWindows();
-			foreach (var window in windows)
-			{
-				if (window.Handler?.PlatformView is Android.App.Activity active)
-				{
-					if (active == activity)
-						return window;
-				}
-			}
-
-			return null;
-		}
+			=> view?.Context?.GetWindow();
 
 		internal static Rect GetFrameRelativeTo(this View view, View relativeTo)
 		{

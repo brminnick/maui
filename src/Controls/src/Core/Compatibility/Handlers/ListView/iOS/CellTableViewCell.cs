@@ -1,3 +1,4 @@
+#nullable disable
 using System;
 using System.ComponentModel;
 using Microsoft.Maui.Controls.Compatibility;
@@ -71,7 +72,6 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 			else
 				reusableCell = tableView.DequeueReusableCell(id);
 
-			cell.Handler?.DisconnectHandler();
 			cell.ReusableCell = reusableCell;
 			cell.TableView = tableView;
 			var handler = cell.ToHandler(cell.FindMauiContext());

@@ -1,5 +1,9 @@
 using System;
+using Microsoft.Maui.ApplicationModel;
+using Microsoft.Maui.Graphics;
+using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml.Controls;
+using Windows.Graphics;
 
 namespace Microsoft.Maui.Handlers
 {
@@ -11,19 +15,55 @@ namespace Microsoft.Maui.Handlers
 
 			if (platformView.Content is null)
 				platformView.Content = new WindowRootViewContainer();
+
+			// update the platform window with the user size/position
+			platformView.UpdatePosition(VirtualView);
+			platformView.UpdateSize(VirtualView);
+
+			var appWindow = platformView.GetAppWindow();
+			if (appWindow is not null)
+			{
+				// then pass the actual size back to the user
+				UpdateVirtualViewFrame(appWindow);
+
+				// THEN attach the event to reduce churn
+				appWindow.Changed += OnWindowChanged;
+			}
+
+			var windowRootContentManager = MauiContext
+				?.GetNavigationRootManager();
+
+			if (windowRootContentManager is not null)
+			{
+				windowRootContentManager.OnApplyTemplateFinished += WindowRootContentManagerOnApplyTemplateFinished;
+			}
+		}
+
+		void WindowRootContentManagerOnApplyTemplateFinished(object? sender, EventArgs e)
+		{
+			UpdateValue(nameof(IWindow.TitleBarDragRectangles));
 		}
 
 		protected override void DisconnectHandler(UI.Xaml.Window platformView)
 		{
-			MauiContext
-				?.GetNavigationRootManager()
-				?.Disconnect();
+			var windowRootContentManager = MauiContext
+				?.GetNavigationRootManager();
+
+			if (windowRootContentManager is not null)
+			{
+				windowRootContentManager.OnApplyTemplateFinished -= WindowRootContentManagerOnApplyTemplateFinished;
+				windowRootContentManager.Disconnect();
+			}
 
 			if (platformView.Content is WindowRootViewContainer container)
 			{
 				container.Children.Clear();
 				platformView.Content = null;
 			}
+
+			var appWindow = platformView.GetAppWindow();
+			if (appWindow is not null)
+				appWindow.Changed -= OnWindowChanged;
 
 			base.DisconnectHandler(platformView);
 		}
@@ -52,6 +92,30 @@ namespace Microsoft.Maui.Handlers
 			if (window.VisualDiagnosticsOverlay != null)
 				window.VisualDiagnosticsOverlay.Initialize();
 		}
+
+		public static void MapX(IWindowHandler handler, IWindow view) =>
+			handler.PlatformView?.UpdateX(view);
+
+		public static void MapY(IWindowHandler handler, IWindow view) =>
+			handler.PlatformView?.UpdateY(view);
+
+		public static void MapWidth(IWindowHandler handler, IWindow view) =>
+			handler.PlatformView?.UpdateWidth(view);
+
+		public static void MapHeight(IWindowHandler handler, IWindow view) =>
+			handler.PlatformView?.UpdateHeight(view);
+
+		public static void MapMaximumWidth(IWindowHandler handler, IWindow view) =>
+			handler.PlatformView?.UpdateMaximumWidth(view);
+
+		public static void MapMaximumHeight(IWindowHandler handler, IWindow view) =>
+			handler.PlatformView?.UpdateMaximumHeight(view);
+
+		public static void MapMinimumWidth(IWindowHandler handler, IWindow view) =>
+			handler.PlatformView?.UpdateMinimumWidth(view);
+
+		public static void MapMinimumHeight(IWindowHandler handler, IWindow view) =>
+			handler.PlatformView?.UpdateMinimumHeight(view);
 
 		public static void MapToolbar(IWindowHandler handler, IWindow view)
 		{
@@ -89,6 +153,56 @@ namespace Microsoft.Maui.Handlers
 		{
 			if (args is DisplayDensityRequest request)
 				request.SetResult(handler.PlatformView.GetDisplayDensity());
+		}
+
+		internal static void MapTitleBarDragRectangles(IWindowHandler handler, IWindow window)
+		{
+			if (!AppWindowTitleBar.IsCustomizationSupported())
+				return;
+
+			var titleBar = handler.PlatformView.AppWindow.TitleBar;
+			var titleBarRects = window.TitleBarDragRectangles;
+
+			if (titleBarRects is null)
+			{
+				titleBar.SetDragRectangles(null);
+			}
+			else
+			{
+				var density = handler.PlatformView.GetDisplayDensity();
+				RectInt32[] dragRects = new RectInt32[titleBarRects.Length];
+				for (var i = 0; i < titleBarRects.Length; i++)
+				{
+					Rect rect = titleBarRects[i];
+					dragRects[i] = new RectInt32(
+					(int)(rect.X * density),
+					(int)(rect.Y * density),
+					(int)(rect.Width * density),
+					(int)(rect.Height * density));
+				}
+
+				titleBar.SetDragRectangles(dragRects);
+			}
+		}
+
+		void OnWindowChanged(AppWindow sender, AppWindowChangedEventArgs args)
+		{
+			if (!args.DidSizeChange && !args.DidPositionChange)
+				return;
+
+			UpdateVirtualViewFrame(sender);
+		}
+
+		void UpdateVirtualViewFrame(AppWindow appWindow)
+		{
+			var size = appWindow.Size;
+			var pos = appWindow.Position;
+
+			var density = PlatformView.GetDisplayDensity();
+
+			VirtualView.FrameChanged(new Rect(
+				pos.X / density, pos.Y / density,
+				size.Width / density, size.Height / density));
 		}
 	}
 }

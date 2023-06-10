@@ -74,6 +74,16 @@
                 <SearchBar
                     IsTextPredictionEnabled="False"/>
                 <Label
+                    Text="Focus"
+                    Style="{StaticResource Headline}" />
+                <SearchBar 
+                    Focused="OnSearchBarFocused"/>
+                <Label
+                    Text="Unfocus"
+                    Style="{StaticResource Headline}" />
+                <SearchBar 
+                    Unfocused="OnSearchBarUnfocused"/>
+                <Label
                     Text="TextChanged"
                     Style="{StaticResource Headline}"/>
                 <SearchBar
@@ -97,6 +107,16 @@
                         </LinearGradientBrush>
                     </SearchBar.Background>
                 </SearchBar>
+                <Label
+                    Text="CancelButtonColor"
+                    Style="{StaticResource Headline}"/>
+                <SearchBar
+                    CancelButtonColor="Red"/>
+                <Label
+                    Text="Keyboard"
+                    Style="{StaticResource Headline}"/>
+                <SearchBar
+                    Keyboard="Numeric"/>
             </VerticalStackLayout>
         </ScrollView>
     </views:BasePage.Content>

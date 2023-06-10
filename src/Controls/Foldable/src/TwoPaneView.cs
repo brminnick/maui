@@ -8,6 +8,17 @@ using Microsoft.Maui.Graphics;
 
 namespace Microsoft.Maui.Controls.Foldable
 {
+	/// <summary>
+	/// Layout container with two panes that will position the child content
+	/// side-by-side or vertically. The relative size of the two panes can be 
+	/// configured, but on a foldable Android device the split will be aligned 
+	/// with the hinge or screen fold.
+	/// </summary>
+	/// <remarks>
+	/// Requires <see cref="Microsoft.Maui.Foldable.HostBuilderExtensions.UseFoldable(Maui.Hosting.MauiAppBuilder)"/>
+	/// be configured in the .NET MAUI app to configure the Android lifecycle
+	/// to detect and adapt to foldable device hinges and screen folds.
+	/// </remarks>
 	[ContentProperty("")]
 	public partial class TwoPaneView : Grid
 	{
@@ -36,38 +47,52 @@ namespace Microsoft.Maui.Controls.Foldable
 		double _previousWidth = -1;
 		double _previousHeight = -1;
 
+		/// <summary>Bindable property for <see cref="TallModeConfiguration"/>.</summary>
 		public static readonly BindableProperty TallModeConfigurationProperty
 			= BindableProperty.Create("TallModeConfiguration", typeof(TwoPaneViewTallModeConfiguration), typeof(TwoPaneView), defaultValue: TwoPaneViewTallModeConfiguration.TopBottom, propertyChanged: TwoPaneViewLayoutPropertyChanged);
 
+		/// <summary>Bindable property for <see cref="WideModeConfiguration"/>.</summary>
 		public static readonly BindableProperty WideModeConfigurationProperty
 			= BindableProperty.Create("WideModeConfiguration", typeof(TwoPaneViewWideModeConfiguration), typeof(TwoPaneView), defaultValue: TwoPaneViewWideModeConfiguration.LeftRight, propertyChanged: TwoPaneViewLayoutPropertyChanged);
 
+		/// <summary>Bindable property for <see cref="Pane1"/>.</summary>
 		public static readonly BindableProperty Pane1Property
 			= BindableProperty.Create("Pane1", typeof(View), typeof(TwoPaneView), propertyChanged: (b, o, n) => OnPanePropertyChanged(b, o, n, 0));
 
+		/// <summary>Bindable property for <see cref="Pane2"/>.</summary>
 		public static readonly BindableProperty Pane2Property
 			= BindableProperty.Create("Pane2", typeof(View), typeof(TwoPaneView), propertyChanged: (b, o, n) => OnPanePropertyChanged(b, o, n, 1));
 
 		static readonly BindablePropertyKey ModePropertyKey
 			= BindableProperty.CreateReadOnly("Mode", typeof(TwoPaneViewMode), typeof(TwoPaneView), defaultValue: TwoPaneViewMode.SinglePane, propertyChanged: OnModePropertyChanged);
 
+		/// <summary>Bindable property for <see cref="Mode"/>.</summary>
 		public static readonly BindableProperty ModeProperty = ModePropertyKey.BindableProperty;
 
+		/// <summary>Bindable property for <see cref="PanePriority"/>.</summary>
 		public static readonly BindableProperty PanePriorityProperty
 			= BindableProperty.Create("PanePriority", typeof(TwoPaneViewPriority), typeof(TwoPaneView), defaultValue: TwoPaneViewPriority.Pane1, propertyChanged: TwoPaneViewLayoutPropertyChanged);
 
+		/// <summary>Bindable property for <see cref="MinTallModeHeight"/>.</summary>
 		public static readonly BindableProperty MinTallModeHeightProperty
 			= BindableProperty.Create("MinTallModeHeight", typeof(double), typeof(TwoPaneView), defaultValueCreator: OnMinModePropertyCreate, propertyChanged: TwoPaneViewLayoutPropertyChanged);
 
+		/// <summary>Bindable property for <see cref="MinWideModeWidth"/>.</summary>
 		public static readonly BindableProperty MinWideModeWidthProperty
 			= BindableProperty.Create("MinWideModeWidth", typeof(double), typeof(TwoPaneView), defaultValueCreator: OnMinModePropertyCreate, propertyChanged: TwoPaneViewLayoutPropertyChanged);
 
+		/// <summary>Bindable property for <see cref="Pane1Length"/>.</summary>
 		public static readonly BindableProperty Pane1LengthProperty
 			= BindableProperty.Create("Pane1Length", typeof(GridLength), typeof(TwoPaneView), defaultValue: GridLength.Star, propertyChanged: TwoPaneViewLayoutPropertyChanged);
 
+		/// <summary>Bindable property for <see cref="Pane2Length"/>.</summary>
 		public static readonly BindableProperty Pane2LengthProperty
 			= BindableProperty.Create("Pane2Length", typeof(GridLength), typeof(TwoPaneView), defaultValue: GridLength.Star, propertyChanged: TwoPaneViewLayoutPropertyChanged);
 
+		/// <summary>
+		/// Event when the <see cref="Microsoft.Maui.Controls.Foldable.TwoPaneViewMode"/>
+		/// changes on a foldable device.
+		/// </summary>
 		public event EventHandler ModeChanged;
 
 		static object OnMinModePropertyCreate(BindableObject bindable)
@@ -106,54 +131,89 @@ namespace Microsoft.Maui.Controls.Foldable
 			twoPaneView.UpdateMode();
 		}
 
+		/// <summary>
+		/// Gets or sets the minimum height at which panes are shown in tall mode.
+		/// </summary>
 		public double MinTallModeHeight
 		{
 			get { return (double)GetValue(MinTallModeHeightProperty); }
 			set { SetValue(MinTallModeHeightProperty, value); }
 		}
+
+		/// <summary>
+		/// Gets or sets the minimum width at which panes are shown in wide mode.
+		/// </summary>
 		public double MinWideModeWidth
 		{
 			get { return (double)GetValue(MinWideModeWidthProperty); }
 			set { SetValue(MinWideModeWidthProperty, value); }
 		}
 
+		/// <summary>
+		/// Gets the calculated width (in wide mode) or height (in tall mode) of pane 1, or sets the GridLength value of pane 1.
+		/// </summary>
+		[System.ComponentModel.TypeConverter(typeof(GridLengthTypeConverter))]
 		public GridLength Pane1Length
 		{
 			get { return (GridLength)GetValue(Pane1LengthProperty); }
 			set { SetValue(Pane1LengthProperty, value); }
 		}
+
+		/// <summary>
+		/// Gets the calculated width (in wide mode) or height (in tall mode) of pane 2, or sets the GridLength value of pane 2.
+		/// </summary>
+		[System.ComponentModel.TypeConverter(typeof(GridLengthTypeConverter))]
 		public GridLength Pane2Length
 		{
 			get { return (GridLength)GetValue(Pane2LengthProperty); }
 			set { SetValue(Pane2LengthProperty, value); }
 		}
 
+		/// <summary>
+		/// Gets a <see cref="Microsoft.Maui.Controls.Foldable.TwoPaneViewMode"/> value
+		/// that indicates how panes are shown.
+		/// </summary>
 		public TwoPaneViewMode Mode { get => (TwoPaneViewMode)GetValue(ModeProperty); }
 
+		/// <summary>
+		/// Gets or sets a value that indicates how panes are shown in tall mode.
+		/// </summary>
 		public TwoPaneViewTallModeConfiguration TallModeConfiguration
 		{
 			get { return (TwoPaneViewTallModeConfiguration)GetValue(TallModeConfigurationProperty); }
 			set { SetValue(TallModeConfigurationProperty, value); }
 		}
 
+		/// <summary>
+		/// Gets or sets a value that indicates how panes are shown in wide mode.
+		/// </summary>
 		public TwoPaneViewWideModeConfiguration WideModeConfiguration
 		{
 			get { return (TwoPaneViewWideModeConfiguration)GetValue(WideModeConfigurationProperty); }
 			set { SetValue(WideModeConfigurationProperty, value); }
 		}
 
+		/// <summary>
+		/// Gets or sets the content of pane 1.
+		/// </summary>
 		public View Pane1
 		{
 			get { return (View)GetValue(Pane1Property); }
 			set { SetValue(Pane1Property, value); }
 		}
 
+		/// <summary>
+		/// Gets or sets the content of pane 2.
+		/// </summary>
 		public View Pane2
 		{
 			get { return (View)GetValue(Pane2Property); }
 			set { SetValue(Pane2Property, value); }
 		}
 
+		/// <summary>
+		/// Gets or sets a value that indicates which pane has priority.
+		/// </summary>
 		public TwoPaneViewPriority PanePriority
 		{
 			get { return (TwoPaneViewPriority)GetValue(PanePriorityProperty); }

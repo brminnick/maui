@@ -1,10 +1,11 @@
-﻿using System;
+﻿#nullable disable
+using System;
 using System.Collections;
 using System.Collections.Specialized;
+using Microsoft.Maui.Controls.Platform;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Data;
-using Microsoft.Maui.Controls.Platform;
 using WApp = Microsoft.UI.Xaml.Application;
 using WDataTemplate = Microsoft.UI.Xaml.DataTemplate;
 using WScrollBarVisibility = Microsoft.UI.Xaml.Controls.ScrollBarVisibility;
@@ -28,7 +29,7 @@ namespace Microsoft.Maui.Controls.Handlers.Items
 
 		protected override void ConnectHandler(ListViewBase platformView)
 		{
-			ItemsView.Scrolled -= CarouselScrolled;
+			ItemsView.Scrolled += CarouselScrolled;
 			ListViewBase.SizeChanged += InitialSetup;
 
 			UpdateScrollBarVisibilityForLoop();

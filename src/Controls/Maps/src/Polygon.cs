@@ -1,13 +1,13 @@
-using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Text;
+using Microsoft.Maui.Devices.Sensors;
 using Microsoft.Maui.Graphics;
 
 namespace Microsoft.Maui.Controls.Maps
 {
-	public class Polygon : MapElement
+	public partial class Polygon : MapElement
 	{
+		/// <summary>Bindable property for <see cref="FillColor"/>.</summary>
 		public static readonly BindableProperty FillColorProperty = BindableProperty.Create(
 			nameof(FillColor),
 			typeof(Color),
@@ -20,11 +20,11 @@ namespace Microsoft.Maui.Controls.Maps
 			set => SetValue(FillColorProperty, value);
 		}
 
-		public IList<Position> Geopath { get; }
+		public IList<Location> Geopath { get; }
 
 		public Polygon()
 		{
-			var observable = new ObservableCollection<Position>();
+			var observable = new ObservableCollection<Location>();
 			observable.CollectionChanged += (sender, args) => OnPropertyChanged(nameof(Geopath));
 			Geopath = observable;
 		}

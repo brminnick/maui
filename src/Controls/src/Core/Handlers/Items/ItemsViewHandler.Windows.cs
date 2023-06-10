@@ -1,22 +1,23 @@
-﻿using System;
+﻿#nullable disable
+using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Text;
+using System.Threading.Tasks;
+using Microsoft.Maui.Controls;
+using Microsoft.Maui.Controls.Internals;
 using Microsoft.Maui.Controls.Platform;
 using Microsoft.Maui.Graphics;
 using Microsoft.Maui.Handlers;
 using Microsoft.UI.Xaml;
-using WVisibility = Microsoft.UI.Xaml.Visibility;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Data;
-using Microsoft.Maui.Controls.Internals;
+using WASDKApp = Microsoft.UI.Xaml.Application;
 using WASDKDataTemplate = Microsoft.UI.Xaml.DataTemplate;
 using WASDKScrollBarVisibility = Microsoft.UI.Xaml.Controls.ScrollBarVisibility;
-using WASDKApp = Microsoft.UI.Xaml.Application;
 using WRect = Windows.Foundation.Rect;
-using Microsoft.UI.Xaml.Controls.Primitives;
-using Microsoft.Maui.Controls;
-using System.Threading.Tasks;
+using WVisibility = Microsoft.UI.Xaml.Visibility;
 
 namespace Microsoft.Maui.Controls.Handlers.Items
 {
@@ -31,6 +32,10 @@ namespace Microsoft.Maui.Controls.Handlers.Items
 		bool _emptyViewDisplayed;
 		double _previousHorizontalOffset;
 		double _previousVerticalOffset;
+		double _previousItemSpacing;
+		double _previousHorizontalItemSpacing;
+		double _previousVerticalItemSpacing;
+
 		protected ListViewBase ListViewBase => PlatformView;
 		protected TItemsView ItemsView => VirtualView;
 		protected TItemsView Element => VirtualView;
@@ -122,6 +127,7 @@ namespace Microsoft.Maui.Controls.Handlers.Items
 				CollectionViewSource.Source = null;
 				CollectionViewSource = null;
 			}
+			VirtualView?.ClearLogicalChildren();
 
 			if (VirtualView?.ItemsSource == null)
 			{
@@ -277,18 +283,36 @@ namespace Microsoft.Maui.Controls.Handlers.Items
 
 		protected virtual void UpdateItemsLayout()
 		{
-			ListViewBase.IsSynchronizedWithCurrentItem = false;
+			if (ListViewBase is FormsGridView gridView)
+			{
+				if (Layout is LinearItemsLayout linearItemsLayout)
+				{
+					gridView.Orientation = linearItemsLayout.ToPlatform();
 
-			FindScrollViewer(ListViewBase);
+					gridView.Span = 1;
 
-			_defaultHorizontalScrollVisibility = null;
-			_defaultVerticalScrollVisibility = null;
+					if (linearItemsLayout.ItemSpacing != _previousItemSpacing)
+					{
+						_previousItemSpacing = linearItemsLayout.ItemSpacing;
+						gridView.ItemContainerStyle = linearItemsLayout.GetItemContainerStyle();
+					}
+				}
 
-			UpdateItemTemplate();
-			UpdateItemsSource();
-			UpdateVerticalScrollBarVisibility();
-			UpdateHorizontalScrollBarVisibility();
-			UpdateEmptyView();
+				if (Layout is GridItemsLayout gridItemsLayout)
+				{
+					gridView.Orientation = gridItemsLayout.ToPlatform();
+
+					gridView.Span = gridItemsLayout.Span;
+
+					if (gridItemsLayout.HorizontalItemSpacing != _previousHorizontalItemSpacing ||
+						gridItemsLayout.VerticalItemSpacing != _previousVerticalItemSpacing)
+					{
+						_previousHorizontalItemSpacing = gridItemsLayout.HorizontalItemSpacing;
+						_previousVerticalItemSpacing = gridItemsLayout.VerticalItemSpacing;
+						gridView.ItemContainerStyle = gridItemsLayout.GetItemContainerStyle();
+					}
+				}
+			}
 		}
 
 		void FindScrollViewer(ListViewBase listView)
@@ -421,6 +445,13 @@ namespace Microsoft.Maui.Controls.Handlers.Items
 			itemsViewScrolledEventArgs = ComputeVisibleIndexes(itemsViewScrolledEventArgs, layoutOrientaton, advancing);
 
 			Element.SendScrolled(itemsViewScrolledEventArgs);
+
+			var remainingItemsThreshold = Element.RemainingItemsThreshold;
+			if (remainingItemsThreshold > -1 &&
+				ItemCount - 1 - itemsViewScrolledEventArgs.LastVisibleItemIndex <= remainingItemsThreshold)
+			{
+				Element.SendRemainingItemsThresholdReached();
+			}
 		}
 
 		protected virtual ItemsViewScrolledEventArgs ComputeVisibleIndexes(ItemsViewScrolledEventArgs args, ItemsLayoutOrientation orientation, bool advancing)

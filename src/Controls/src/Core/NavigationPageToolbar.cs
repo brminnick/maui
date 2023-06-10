@@ -1,7 +1,6 @@
-﻿using System;
+﻿#nullable disable
+using System;
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
-using System.Text;
 using Microsoft.Maui.Graphics;
 
 namespace Microsoft.Maui.Controls
@@ -17,9 +16,12 @@ namespace Microsoft.Maui.Controls
 		string _title;
 		VisualElement _titleView;
 		bool _drawerToggleVisible;
-		Page _rootPage;
+		bool _backButtonVisible;
+		bool _userChanged;
+		internal Page RootPage { get; private set; }
 		List<NavigationPage> _navigationPagesStack = new List<NavigationPage>();
 		internal NavigationPage CurrentNavigationPage => _currentNavigationPage;
+		internal ToolbarTracker ToolbarTracker => _toolbarTracker;
 		public override Color BarTextColor { get => GetBarTextColor(); set => SetProperty(ref _barTextColor, value); }
 		public override Color IconColor { get => GetIconColor(); set => SetProperty(ref _iconColor, value); }
 		public override string Title { get => GetTitle(); set => SetProperty(ref _title, value); }
@@ -28,11 +30,16 @@ namespace Microsoft.Maui.Controls
 
 		public NavigationPageToolbar(Maui.IElement parent, Page rootPage) : base(parent)
 		{
-			_toolbarTracker.CollectionChanged += (_, __) => ToolbarItems = _toolbarTracker.ToolbarItems;
-			_rootPage = rootPage;
+			_toolbarTracker.CollectionChanged += OnToolbarItemsChanged;
+			RootPage = rootPage;
 			_toolbarTracker.PageAppearing += OnPageAppearing;
 			_toolbarTracker.PagePropertyChanged += OnPagePropertyChanged;
-			_toolbarTracker.Target = _rootPage;
+			_toolbarTracker.Target = RootPage;
+		}
+
+		void OnToolbarItemsChanged(object sender, EventArgs e)
+		{
+			ToolbarItems = _toolbarTracker.ToolbarItems;
 		}
 
 		void OnPagePropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
@@ -89,14 +96,14 @@ namespace Microsoft.Maui.Controls
 			_hasAppeared = true;
 
 			ApplyChanges(_currentNavigationPage);
+		}
 
-			// This is to catch scenarios where the user
-			// inserts or removes the root page.
-			// Which will cause the back button visibility to change.
-			void NavigationPageChildrenChanged(object s, ElementEventArgs a)
-			{
-				ApplyChanges(_currentNavigationPage);
-			}
+		// This is to catch scenarios where the user
+		// inserts or removes the root page.
+		// Which will cause the back button visibility to change.
+		void NavigationPageChildrenChanged(object s, ElementEventArgs a)
+		{
+			ApplyChanges(_currentNavigationPage);
 		}
 
 		bool GetBackButtonVisible()
@@ -106,9 +113,6 @@ namespace Microsoft.Maui.Controls
 
 			return NavigationPage.GetHasBackButton(_currentPage) && GetBackButtonVisibleCalculated(false).Value;
 		}
-
-		bool _backButtonVisible;
-		bool _userChanged;
 
 		public override bool BackButtonVisible
 		{
@@ -286,6 +290,26 @@ namespace Microsoft.Maui.Controls
 			}
 
 			return NavigationPage.GetTitleView(target);
+		}
+
+		internal void Disconnect()
+		{
+			if (_toolbarTracker is not null)
+			{
+				_toolbarTracker.PageAppearing -= OnPageAppearing;
+				_toolbarTracker.PagePropertyChanged -= OnPagePropertyChanged;
+				_toolbarTracker.CollectionChanged -= OnToolbarItemsChanged;
+				_toolbarTracker.Target = null;
+			}
+
+			if (_navigationPagesStack is not null)
+			{
+				foreach (var navPage in _navigationPagesStack)
+				{
+					navPage.ChildAdded -= NavigationPageChildrenChanged;
+					navPage.ChildRemoved -= NavigationPageChildrenChanged;
+				}
+			}
 		}
 	}
 }

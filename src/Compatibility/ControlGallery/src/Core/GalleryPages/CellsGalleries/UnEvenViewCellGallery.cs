@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Microsoft.Maui.Controls.Compatibility.ControlGallery
+namespace Microsoft.Maui.Controls.ControlGallery
 {
 	public class UnevenViewCellGallery : ContentPage
 	{
@@ -13,7 +13,7 @@ namespace Microsoft.Maui.Controls.Compatibility.ControlGallery
 			Title = "UnevenViewCell Gallery - Legacy";
 
 			var map = MapGallery.MakeMap();
-			map.HasScrollEnabled = false;
+			map.IsScrollEnabled = false;
 
 			Content = new TableView
 			{

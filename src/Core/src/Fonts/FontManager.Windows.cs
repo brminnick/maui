@@ -5,6 +5,8 @@ using System.Collections.Generic;
 using System.IO;
 using Microsoft.Extensions.Logging;
 using Microsoft.Graphics.Canvas.Text;
+using Microsoft.Maui.ApplicationModel;
+using Microsoft.Maui.Storage;
 using Microsoft.UI.Xaml.Media;
 
 namespace Microsoft.Maui
@@ -25,18 +27,27 @@ namespace Microsoft.Maui
 		readonly IFontRegistrar _fontRegistrar;
 		readonly IServiceProvider? _serviceProvider;
 
+		/// <summary>
+		/// Creates a new <see cref="EmbeddedFontLoader"/> instance.
+		/// </summary>
+		/// <param name="fontRegistrar">An <see cref="IFontRegistrar"/> instance for retrieving details about the registered fonts.</param>
+		/// <param name="serviceProvider">The applications <see cref="IServiceProvider"/>.
+		/// Typically this is provided through dependency injection.</param>
 		public FontManager(IFontRegistrar fontRegistrar, IServiceProvider? serviceProvider = null)
 		{
 			_fontRegistrar = fontRegistrar;
 			_serviceProvider = serviceProvider;
 		}
 
+		/// <inheritdoc/>
 		public FontFamily DefaultFontFamily =>
 			(FontFamily)UI.Xaml.Application.Current.Resources[SystemFontFamily];
 
+		/// <inheritdoc/>
 		public double DefaultFontSize =>
 			(double)UI.Xaml.Application.Current.Resources[SystemFontSize];
 
+		/// <inheritdoc/>
 		public FontFamily GetFontFamily(Font font)
 		{
 			if (font.IsDefault || string.IsNullOrWhiteSpace(font.Family))
@@ -45,6 +56,7 @@ namespace Microsoft.Maui
 			return _fonts.GetOrAdd(font.Family, CreateFontFamily);
 		}
 
+		/// <inheritdoc/>
 		public double GetFontSize(Font font, double defaultFontSize = 0) =>
 			font.Size <= 0 || double.IsNaN(font.Size)
 				? (defaultFontSize > 0 ? defaultFontSize : DefaultFontSize)
@@ -136,16 +148,20 @@ namespace Microsoft.Maui
 			{
 				var fontUri = new Uri(fontFile, UriKind.RelativeOrAbsolute);
 
-				// CanvasFontSet only supports ms-appx:// and ms-appdata:// font URIs
-				if (fontUri.IsAbsoluteUri && (fontUri.Scheme == "ms-appx" || fontUri.Scheme == "ms-appdata"))
+				// unpackaged apps can't load files using packaged schemes
+				if (!AppInfoUtils.IsPackagedApp)
 				{
-					using (var fontSet = new CanvasFontSet(fontUri))
+					var path = fontUri.AbsolutePath.TrimStart('/');
+					if (FileSystemUtils.TryGetAppPackageFileUri(path, out var uri))
+						fontUri = new Uri(uri, UriKind.RelativeOrAbsolute);
+				}
+
+				using (var fontSet = new CanvasFontSet(fontUri))
+				{
+					if (fontSet.Fonts.Count != 0)
 					{
-						if (fontSet.Fonts.Count != 0)
-						{
-							var props = fontSet.GetPropertyValues(CanvasFontPropertyIdentifier.FamilyName);
-							return props.Length == 0 ? null : props[0].Value;
-						}
+						var props = fontSet.GetPropertyValues(CanvasFontPropertyIdentifier.FamilyName);
+						return props.Length == 0 ? null : props[0].Value;
 					}
 				}
 

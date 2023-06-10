@@ -5,7 +5,7 @@ namespace Microsoft.Maui.Graphics
 {
 	public static partial class PaintExtensions
 	{
-		public static Drawable? ToDrawable(this Paint paint, Context? context)
+		public static Drawable? ToDrawable(this Paint? paint, Context? context)
 		{
 			if (paint is SolidPaint solidPaint)
 				return solidPaint.CreateDrawable(context);
@@ -71,8 +71,8 @@ namespace Microsoft.Maui.Graphics
 			return drawable;
 		}
 
-		static bool IsValid(this GradientPaint? gradienPaint) =>
-			gradienPaint?.GradientStops?.Length > 0;
+		static bool IsValid(this GradientPaint? gradientPaint) =>
+			gradientPaint?.GradientStops?.Length > 0;
 
 		internal static GradientData GetGradientPaintData(GradientPaint gradientPaint, float alpha = 1.0f)
 		{

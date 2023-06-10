@@ -16,7 +16,7 @@ using NativeApplication = Android.App.Application;
 using NativeWindow = Android.App.Activity;
 #elif TIZEN
 using NativeApplication = Tizen.Applications.CoreApplication;
-using NativeWindow =  ElmSharp.Window;
+using NativeWindow = Tizen.NUI.Window;
 #else
 using NativeApplication = System.Object;
 using NativeWindow = System.Object;
@@ -74,16 +74,6 @@ namespace Microsoft.Maui
 
 			foreach (var service in scopedServices)
 				service.Initialize(scopedContext.Services);
-		}
-
-		public static FlowDirection GetFlowDirection(this IMauiContext mauiContext)
-		{
-			var appInfo = AppInfo.Current;
-
-			if (appInfo.RequestedLayoutDirection == LayoutDirection.RightToLeft)
-				return FlowDirection.RightToLeft;
-
-			return FlowDirection.LeftToRight;
 		}
 	}
 }

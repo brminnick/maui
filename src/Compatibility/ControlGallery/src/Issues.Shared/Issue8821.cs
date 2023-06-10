@@ -14,7 +14,7 @@ using Xamarin.UITest;
 using NUnit.Framework;
 #endif
 
-namespace Microsoft.Maui.Controls.Compatibility.ControlGallery.Issues
+namespace Microsoft.Maui.Controls.ControlGallery.Issues
 {
 #if UITEST
 	[Category(UITestCategories.Image)]
@@ -74,7 +74,7 @@ namespace Microsoft.Maui.Controls.Compatibility.ControlGallery.Issues
 		{
 			var bytes = await DownloadImageAsync(imageUrl);
 
-			string path = Environment.GetFolderPath(Environment.SpecialFolder.Personal);
+			string path = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
 			SecondImageSource = IOPath.Combine(path, "Issue8821.gif");
 			File.WriteAllBytes(SecondImageSource, bytes);
 

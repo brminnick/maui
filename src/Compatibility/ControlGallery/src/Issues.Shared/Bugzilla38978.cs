@@ -9,7 +9,7 @@ using NUnit.Framework;
 using Microsoft.Maui.Controls.Compatibility.UITests;
 #endif
 
-namespace Microsoft.Maui.Controls.Compatibility.ControlGallery.Issues
+namespace Microsoft.Maui.Controls.ControlGallery.Issues
 {
 	[Preserve(AllMembers = true)]
 	[Issue(IssueTracker.Bugzilla, 38978, "Cell.ForceUpdateSize issues with row selection/deselection (ViewCell)", PlatformAffected.Android)]
@@ -30,7 +30,7 @@ namespace Microsoft.Maui.Controls.Compatibility.ControlGallery.Issues
 				Label label = new Label { Text = "Click the image to resize", VerticalOptions = LayoutOptions.Center };
 
 				var tapGestureRecognizer = new TapGestureRecognizer();
-				tapGestureRecognizer.Tapped += (object sender, EventArgs e) =>
+				tapGestureRecognizer.Tapped += (sender, e) =>
 				{
 					if (_image.HeightRequest < 250)
 					{

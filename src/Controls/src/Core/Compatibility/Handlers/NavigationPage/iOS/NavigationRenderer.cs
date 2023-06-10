@@ -1,9 +1,11 @@
-﻿using System;
+﻿#nullable disable
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
 using CoreGraphics;
+using Foundation;
 using Microsoft.Maui.Controls.Internals;
 using Microsoft.Maui.Controls.Platform;
 using Microsoft.Maui.Controls.PlatformConfiguration.iOSSpecific;
@@ -22,7 +24,7 @@ using SizeF = CoreGraphics.CGSize;
 
 namespace Microsoft.Maui.Controls.Handlers.Compatibility
 {
-	public class NavigationRenderer : UINavigationController, IPlatformViewHandler
+	public class NavigationRenderer : UINavigationController, INavigationViewHandler, IPlatformViewHandler
 	{
 		internal const string UpdateToolbarButtons = "Xamarin.UpdateToolbarButtons";
 		bool _appeared;
@@ -36,12 +38,20 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 		bool _disposed;
 		IMauiContext _mauiContext;
 		IMauiContext MauiContext => _mauiContext;
-		public static IPropertyMapper<NavigationPage, NavigationRenderer> Mapper = new PropertyMapper<NavigationPage, NavigationRenderer>(ViewHandler.ViewMapper);
+		public static IPropertyMapper<NavigationPage, NavigationRenderer> Mapper = new PropertyMapper<NavigationPage, NavigationRenderer>(ViewHandler.ViewMapper)
+		{
+			[PlatformConfiguration.iOSSpecific.NavigationPage.PrefersLargeTitlesProperty.PropertyName] = NavigationPage.MapPrefersLargeTitles,
+			[PlatformConfiguration.iOSSpecific.NavigationPage.IsNavigationBarTranslucentProperty.PropertyName] = NavigationPage.MapIsNavigationBarTranslucent,
+		};
+
 		public static CommandMapper<NavigationPage, NavigationRenderer> CommandMapper = new CommandMapper<NavigationPage, NavigationRenderer>(ViewHandler.ViewCommandMapper);
 		ViewHandlerDelegator<NavigationPage> _viewHandlerWrapper;
 		bool _navigating = false;
+		VisualElement _element;
+		bool _uiRequestedPop; // User tapped the back button or swiped to navigate back
+		MauiNavigationDelegate NavigationDelegate => Delegate as MauiNavigationDelegate;
 
-		[Preserve(Conditional = true)]
+		[Internals.Preserve(Conditional = true)]
 		public NavigationRenderer() : base(typeof(MauiControlsNavigationBar), null)
 		{
 			_viewHandlerWrapper = new ViewHandlerDelegator<NavigationPage>(Mapper, CommandMapper, this);
@@ -56,7 +66,7 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 		NavigationPage NavPage => Element as NavigationPage;
 		INavigationPageController NavPageController => NavPage;
 
-		public VisualElement Element { get => _viewHandlerWrapper.Element; }
+		public VisualElement Element { get => _viewHandlerWrapper.Element ?? _element; }
 
 		public event EventHandler<VisualElementChangedEventArgs> ElementChanged;
 
@@ -74,6 +84,7 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 		public void SetElement(VisualElement element)
 		{
 			(this as IElementHandler).SetVirtualView(element);
+			_element = element;
 		}
 
 		public UIViewController ViewController
@@ -145,6 +156,8 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 
 		public override void ViewDidDisappear(bool animated)
 		{
+			CompletePendingNavigation(false);
+
 			base.ViewDidDisappear(animated);
 
 			if (!_appeared || Element == null)
@@ -374,9 +387,32 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 				_parentFlyoutPage = flyoutDetail;
 		}
 
+		TaskCompletionSource<bool> _pendingNavigationRequest;
+		ActionDisposable _removeLifecycleEvents;
+
+		void CompletePendingNavigation(bool success)
+		{
+			if (_pendingNavigationRequest is null)
+				return;
+
+			_removeLifecycleEvents?.Dispose();
+			_removeLifecycleEvents = null;
+
+			var pendingNavigationRequest = _pendingNavigationRequest;
+			_pendingNavigationRequest = null;
+
+			BeginInvokeOnMainThread(() =>
+			{
+				pendingNavigationRequest?.TrySetResult(success);
+				pendingNavigationRequest = null;
+			});
+		}
+
 		Task<bool> GetAppearedOrDisappearedTask(Page page)
 		{
-			var tcs = new TaskCompletionSource<bool>();
+			CompletePendingNavigation(false);
+
+			_pendingNavigationRequest = new TaskCompletionSource<bool>();
 
 			_ = page.ToPlatform(MauiContext);
 			var renderer = (IPlatformViewHandler)page.Handler;
@@ -387,24 +423,33 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 			EventHandler appearing = null, disappearing = null;
 			appearing = (s, e) =>
 			{
-				parentViewController.Appearing -= appearing;
-				parentViewController.Disappearing -= disappearing;
-
-				BeginInvokeOnMainThread(() => { tcs.SetResult(true); });
+				CompletePendingNavigation(true);
 			};
 
 			disappearing = (s, e) =>
 			{
+				CompletePendingNavigation(false);
+			};
+
+			if (NavigationDelegate is not null)
+				NavigationDelegate.WaitingForNavigationToFinish = true;
+
+			_removeLifecycleEvents = new ActionDisposable(() =>
+			{
+				// This ensures that we don't cause multiple calls to CompletePendingNavigation.
+				// Depending on circumstances (covered by modal page) CompletePendingNavigation 
+				// might get called from the Delegate vs the DidAppear/DidDisappear methods
+				// on the ParentingViewController.
 				parentViewController.Appearing -= appearing;
 				parentViewController.Disappearing -= disappearing;
-
-				BeginInvokeOnMainThread(() => { tcs.SetResult(false); });
-			};
+				if (NavigationDelegate is not null)
+					NavigationDelegate.WaitingForNavigationToFinish = false;
+			});
 
 			parentViewController.Appearing += appearing;
 			parentViewController.Disappearing += disappearing;
 
-			return tcs.Task;
+			return _pendingNavigationRequest.Task;
 		}
 
 		void HandlePropertyChanged(object sender, PropertyChangedEventArgs e)
@@ -515,13 +560,12 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 
 		void UpdateUseLargeTitles()
 		{
-			if (OperatingSystem.IsIOSVersionAtLeast(11) && NavPage != null)
-				NavigationBar.PrefersLargeTitles = NavPage.OnThisPlatform().PrefersLargeTitles();
+			_viewHandlerWrapper.UpdateProperty(PrefersLargeTitlesProperty.PropertyName);
 		}
 
 		void UpdateTranslucent()
 		{
-			NavigationBar.Translucent = NavPage.OnThisPlatform().IsNavigationBarTranslucent();
+			_viewHandlerWrapper.UpdateProperty(IsNavigationBarTranslucentProperty.PropertyName);
 		}
 
 		void InsertPageBefore(Page page, Page before)
@@ -726,7 +770,7 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 			var barTextColor = NavPage.BarTextColor;
 			var statusBarColorMode = NavPage.OnThisPlatform().GetStatusBarTextColorMode();
 
-#pragma warning disable CA1416 // TODO:   'UIApplication.StatusBarStyle' is unsupported on: 'ios' 9.0 and later
+#pragma warning disable CA1416, CA1422 // TODO:   'UIApplication.StatusBarStyle' is unsupported on: 'ios' 9.0 and later
 			if (statusBarColorMode == StatusBarTextColorMode.DoNotAdjust || barTextColor?.GetLuminosity() <= 0.5)
 			{
 				// Use dark text color for status bar
@@ -744,7 +788,7 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 				// Use light text color for status bar
 				UIApplication.SharedApplication.StatusBarStyle = UIStatusBarStyle.LightContent;
 			}
-#pragma warning restore CA1416
+#pragma warning restore CA1416, CA1422
 		}
 
 		void UpdateToolBarVisible()
@@ -777,7 +821,7 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 			TopViewController?.NavigationItem?.TitleView?.LayoutSubviews();
 		}
 
-		internal async Task UpdateFormsInnerNavigation(Page pageBeingRemoved)
+		async Task UpdateFormsInnerNavigation(Page pageBeingRemoved)
 		{
 			if (NavPage == null)
 				return;
@@ -786,9 +830,24 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 
 			_ignorePopCall = true;
 			if (Element.Navigation.NavigationStack.Contains(pageBeingRemoved))
+			{
 				await (NavPage as INavigationPageController)?.RemoveAsyncInner(pageBeingRemoved, false, true);
-			_ignorePopCall = false;
+				if (_uiRequestedPop)
+				{
+					NavPage?.SendNavigatedFromHandler(pageBeingRemoved);
+				}
+			}
 
+			_ignorePopCall = false;
+			_uiRequestedPop = false;
+		}
+
+		[Export("navigationBar:shouldPopItem:")]
+		[Internals.Preserve(Conditional = true)]
+		internal bool ShouldPopItem(UINavigationBar _, UINavigationItem __)
+		{
+			_uiRequestedPop = true;
+			return true;
 		}
 
 		internal static void SetFlyoutLeftBarButton(UIViewController containerController, FlyoutPage FlyoutPage)
@@ -841,7 +900,9 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 			if (_defaultAccessibilityHint == null)
 				_defaultAccessibilityHint = uIBarButtonItem.AccessibilityHint;
 
+#pragma warning disable CS0618 // Type or member is obsolete
 			uIBarButtonItem.AccessibilityHint = (string)element.GetValue(AutomationProperties.HelpTextProperty) ?? _defaultAccessibilityHint;
+#pragma warning restore CS0618 // Type or member is obsolete
 		}
 
 		static void SetAccessibilityLabel(UIBarButtonItem uIBarButtonItem, Element element)
@@ -852,7 +913,9 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 			if (_defaultAccessibilityLabel == null)
 				_defaultAccessibilityLabel = uIBarButtonItem.AccessibilityLabel;
 
+#pragma warning disable CS0618 // Type or member is obsolete
 			uIBarButtonItem.AccessibilityLabel = (string)element.GetValue(AutomationProperties.NameProperty) ?? _defaultAccessibilityLabel;
+#pragma warning restore CS0618 // Type or member is obsolete
 		}
 
 		static void SetIsAccessibilityElement(UIBarButtonItem uIBarButtonItem, Element element)
@@ -956,7 +1019,11 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 
 		class MauiNavigationDelegate : UINavigationControllerDelegate
 		{
+			bool _finishedWithInitialNavigation;
 			readonly WeakReference<NavigationRenderer> _navigation;
+
+			public bool WaitingForNavigationToFinish { get; internal set; }
+
 			public MauiNavigationDelegate(NavigationRenderer navigationRenderer)
 			{
 				_navigation = new WeakReference<NavigationRenderer>(navigationRenderer);
@@ -971,6 +1038,15 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 					{
 						pvc.UpdateFrames();
 					}
+
+					if (r.Element is NavigationPage np && !_finishedWithInitialNavigation)
+					{
+						_finishedWithInitialNavigation = true;
+						np.SendNavigatedFromHandler(null);
+					}
+
+					if (WaitingForNavigationToFinish)
+						r.CompletePendingNavigation(true);
 				}
 			}
 
@@ -993,9 +1069,9 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 
 			public ParentingViewController(NavigationRenderer navigation)
 			{
-#pragma warning disable CA1416 // TODO: 'UIViewController.AutomaticallyAdjustsScrollViewInsets' is unsupported on: 'ios' 11.0 and later
+#pragma warning disable CA1416, CA1422 // TODO: 'UIViewController.AutomaticallyAdjustsScrollViewInsets' is unsupported on: 'ios' 11.0 and later
 				AutomaticallyAdjustsScrollViewInsets = false;
-#pragma warning restore
+#pragma warning restore CA1416, CA1422
 
 				_navigation = new WeakReference<NavigationRenderer>(navigation);
 			}
@@ -1252,6 +1328,14 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 				return empty;
 			}
 
+			public override void ViewWillTransitionToSize(SizeF toSize, IUIViewControllerTransitionCoordinator coordinator)
+			{
+				base.ViewWillTransitionToSize(toSize, coordinator);
+
+				if (UIDevice.CurrentDevice.UserInterfaceIdiom == UIUserInterfaceIdiom.Pad)
+					UpdateLeftBarButtonItem();
+			}
+
 			internal void UpdateLeftBarButtonItem(Page pageBeingRemoved = null)
 			{
 				NavigationRenderer n;
@@ -1484,13 +1568,15 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 					return ivh.ViewController.PreferredInterfaceOrientationForPresentation();
 				return base.PreferredInterfaceOrientationForPresentation();
 			}
-
+#pragma warning disable CA1422 // Validate platform compatibility
 			public override bool ShouldAutorotate()
 			{
 				if (Child?.Handler is IPlatformViewHandler ivh)
+
 					return ivh.ViewController.ShouldAutorotate();
 				return base.ShouldAutorotate();
 			}
+#pragma warning restore CA1422 // Validate platform compatibility
 
 			[System.Runtime.Versioning.UnsupportedOSPlatform("ios6.0")]
 			[System.Runtime.Versioning.UnsupportedOSPlatform("tvos")]
@@ -1542,6 +1628,10 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 
 		UIViewController IPlatformViewHandler.ViewController => this;
 
+		IStackNavigationView INavigationViewHandler.VirtualView => NavPage;
+
+		UIView INavigationViewHandler.PlatformView => NativeView;
+
 		Size IViewHandler.GetDesiredSize(double widthConstraint, double heightConstraint) =>
 			_viewHandlerWrapper.GetDesiredSize(widthConstraint, heightConstraint);
 
@@ -1556,6 +1646,7 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 		void IElementHandler.SetVirtualView(Maui.IElement view)
 		{
 			_viewHandlerWrapper.SetVirtualView(view, ElementChanged, false);
+			_element = view as VisualElement;
 
 			void ElementChanged(ElementChangedEventArgs<NavigationPage> e)
 			{

@@ -49,7 +49,7 @@ namespace Maui.Controls.Sample.Pages
 
 		void OnLineBreakModeButtonClicked(object sender, System.EventArgs e)
 		{
-			LineBreakModeButton.LineBreakMode = SelectLineBreakMode();
+			LineBreakModeButton.LineBreakMode = ImageLineBreakModeButton.LineBreakMode = SelectLineBreakMode();
 		}
 
 		LineBreakMode SelectLineBreakMode()
@@ -72,10 +72,35 @@ namespace Maui.Controls.Sample.Pages
 					return LineBreakMode.WordWrap;
 			}
 		}
+
+		int _backgroundCount;
+
+		void OnBackgroundButtonClicked(object sender, System.EventArgs e)
+		{
+			BackgroundButton.Text = $"Background tapped {_backgroundCount} times";
+			_backgroundCount++;
+		}
 	}
 
 	public class ButtonPageViewModel : BindableObject
 	{
+		bool _changeButtonColor;
+
+		public string ButtonBackground => "#fc87ad";
+
+		public bool ChangeButtonColor
+		{
+			get => _changeButtonColor;
+			set
+			{
+				if (_changeButtonColor != value)
+				{
+					_changeButtonColor = value;
+					OnPropertyChanged();
+				}
+			}
+		}
+
 		public ICommand ButtonCommand => new Command(OnExecuteImageButtonCommand);
 
 		void OnExecuteImageButtonCommand()

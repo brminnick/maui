@@ -5,16 +5,18 @@ using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Linq;
-using NUnit.Framework;
+using System.Reflection;
+using System.Threading.Tasks;
+using Xunit;
 
 namespace Microsoft.Maui.Controls.Core.UnitTests
 {
 	using StackLayout = Microsoft.Maui.Controls.Compatibility.StackLayout;
 
-	[TestFixture]
+
 	public class BindableLayoutTests : BaseTestFixture
 	{
-		[Test]
+		[Fact]
 		public void TracksEmpty()
 		{
 			var layout = new StackLayout
@@ -25,10 +27,10 @@ namespace Microsoft.Maui.Controls.Core.UnitTests
 			var itemsSource = new ObservableCollection<int>();
 			BindableLayout.SetItemsSource(layout, itemsSource);
 
-			Assert.IsTrue(IsLayoutWithItemsSource(itemsSource, layout));
+			Assert.True(IsLayoutWithItemsSource(itemsSource, layout));
 		}
 
-		[Test]
+		[Fact]
 		public void TracksAdd()
 		{
 			var layout = new StackLayout
@@ -40,10 +42,10 @@ namespace Microsoft.Maui.Controls.Core.UnitTests
 			BindableLayout.SetItemsSource(layout, itemsSource);
 
 			itemsSource.Add(1);
-			Assert.IsTrue(IsLayoutWithItemsSource(itemsSource, layout));
+			Assert.True(IsLayoutWithItemsSource(itemsSource, layout));
 		}
 
-		[Test]
+		[Fact]
 		public void TracksInsert()
 		{
 			var layout = new StackLayout
@@ -55,10 +57,10 @@ namespace Microsoft.Maui.Controls.Core.UnitTests
 			BindableLayout.SetItemsSource(layout, itemsSource);
 
 			itemsSource.Insert(2, 5);
-			Assert.IsTrue(IsLayoutWithItemsSource(itemsSource, layout));
+			Assert.True(IsLayoutWithItemsSource(itemsSource, layout));
 		}
 
-		[Test]
+		[Fact]
 		public void TracksRemove()
 		{
 			var layout = new StackLayout
@@ -70,13 +72,13 @@ namespace Microsoft.Maui.Controls.Core.UnitTests
 			BindableLayout.SetItemsSource(layout, itemsSource);
 
 			itemsSource.RemoveAt(0);
-			Assert.IsTrue(IsLayoutWithItemsSource(itemsSource, layout));
+			Assert.True(IsLayoutWithItemsSource(itemsSource, layout));
 
 			itemsSource.Remove(1);
-			Assert.IsTrue(IsLayoutWithItemsSource(itemsSource, layout));
+			Assert.True(IsLayoutWithItemsSource(itemsSource, layout));
 		}
 
-		[Test]
+		[Fact]
 		public void TracksRemoveAll()
 		{
 			var layout = new StackLayout
@@ -88,10 +90,10 @@ namespace Microsoft.Maui.Controls.Core.UnitTests
 			BindableLayout.SetItemsSource(layout, itemsSource);
 
 			itemsSource.RemoveAll();
-			Assert.IsTrue(IsLayoutWithItemsSource(itemsSource, layout));
+			Assert.True(IsLayoutWithItemsSource(itemsSource, layout));
 		}
 
-		[Test]
+		[Fact]
 		public void TracksReplace()
 		{
 			var layout = new StackLayout
@@ -105,10 +107,10 @@ namespace Microsoft.Maui.Controls.Core.UnitTests
 			itemsSource[0] = 3;
 			itemsSource[1] = 4;
 			itemsSource[2] = 5;
-			Assert.IsTrue(IsLayoutWithItemsSource(itemsSource, layout));
+			Assert.True(IsLayoutWithItemsSource(itemsSource, layout));
 		}
 
-		[Test]
+		[Fact]
 		public void TracksMove()
 		{
 			var layout = new StackLayout
@@ -120,13 +122,13 @@ namespace Microsoft.Maui.Controls.Core.UnitTests
 			BindableLayout.SetItemsSource(layout, itemsSource);
 
 			itemsSource.Move(0, 1);
-			Assert.IsTrue(IsLayoutWithItemsSource(itemsSource, layout));
+			Assert.True(IsLayoutWithItemsSource(itemsSource, layout));
 
 			itemsSource.Move(1, 0);
-			Assert.IsTrue(IsLayoutWithItemsSource(itemsSource, layout));
+			Assert.True(IsLayoutWithItemsSource(itemsSource, layout));
 		}
 
-		[Test]
+		[Fact]
 		public void TracksClear()
 		{
 			var layout = new StackLayout
@@ -138,10 +140,10 @@ namespace Microsoft.Maui.Controls.Core.UnitTests
 			BindableLayout.SetItemsSource(layout, itemsSource);
 
 			itemsSource.Clear();
-			Assert.IsTrue(IsLayoutWithItemsSource(itemsSource, layout));
+			Assert.True(IsLayoutWithItemsSource(itemsSource, layout));
 		}
 
-		[Test]
+		[Fact]
 		public void TracksNull()
 		{
 			var layout = new StackLayout
@@ -151,14 +153,14 @@ namespace Microsoft.Maui.Controls.Core.UnitTests
 
 			var itemsSource = new ObservableCollection<int>(Enumerable.Range(0, 10));
 			BindableLayout.SetItemsSource(layout, itemsSource);
-			Assert.IsTrue(IsLayoutWithItemsSource(itemsSource, layout));
+			Assert.True(IsLayoutWithItemsSource(itemsSource, layout));
 
 			itemsSource = null;
 			BindableLayout.SetItemsSource(layout, itemsSource);
-			Assert.IsTrue(IsLayoutWithItemsSource(itemsSource, layout));
+			Assert.True(IsLayoutWithItemsSource(itemsSource, layout));
 		}
 
-		[Test]
+		[Fact]
 		public void ItemTemplateIsSet()
 		{
 			var layout = new StackLayout
@@ -171,11 +173,11 @@ namespace Microsoft.Maui.Controls.Core.UnitTests
 
 			BindableLayout.SetItemTemplate(layout, new DataTemplateBoxView());
 
-			Assert.IsTrue(IsLayoutWithItemsSource(itemsSource, layout));
-			Assert.AreEqual(itemsSource.Count, layout.Children.Cast<BoxView>().Count());
+			Assert.True(IsLayoutWithItemsSource(itemsSource, layout));
+			Assert.Equal(itemsSource.Count, layout.Children.Cast<BoxView>().Count());
 		}
 
-		[Test]
+		[Fact]
 		public void ItemTemplateSelectorIsSet()
 		{
 			var layout = new StackLayout
@@ -187,11 +189,11 @@ namespace Microsoft.Maui.Controls.Core.UnitTests
 			BindableLayout.SetItemsSource(layout, itemsSource);
 			BindableLayout.SetItemTemplateSelector(layout, new DataTemplateSelectorFrame());
 
-			Assert.IsTrue(IsLayoutWithItemsSource(itemsSource, layout));
-			Assert.AreEqual(itemsSource.Count, layout.Children.Cast<Frame>().Count());
+			Assert.True(IsLayoutWithItemsSource(itemsSource, layout));
+			Assert.Equal(itemsSource.Count, layout.Children.Cast<Frame>().Count());
 		}
 
-		[Test]
+		[Fact]
 		public void ContainerIsPassedInSelectTemplate()
 		{
 			var layout = new StackLayout
@@ -210,10 +212,10 @@ namespace Microsoft.Maui.Controls.Core.UnitTests
 				return null;
 			}));
 
-			Assert.AreEqual(containerPassedCount, itemsSource.Count);
+			Assert.Equal(containerPassedCount, itemsSource.Count);
 		}
 
-		[Test]
+		[Fact]
 		public void ItemTemplateTakesPrecendenceOverItemTemplateSelector()
 		{
 			var layout = new StackLayout
@@ -226,11 +228,11 @@ namespace Microsoft.Maui.Controls.Core.UnitTests
 			BindableLayout.SetItemTemplate(layout, new DataTemplateBoxView());
 			BindableLayout.SetItemTemplateSelector(layout, new DataTemplateSelectorFrame());
 
-			Assert.IsTrue(IsLayoutWithItemsSource(itemsSource, layout));
-			Assert.AreEqual(itemsSource.Count, layout.Children.Cast<BoxView>().Count());
+			Assert.True(IsLayoutWithItemsSource(itemsSource, layout));
+			Assert.Equal(itemsSource.Count, layout.Children.Cast<BoxView>().Count());
 		}
 
-		[Test]
+		[Fact]
 		public void ItemsSourceTakePrecendenceOverLayoutChildren()
 		{
 			var layout = new StackLayout
@@ -244,11 +246,11 @@ namespace Microsoft.Maui.Controls.Core.UnitTests
 
 			var itemsSource = new ObservableCollection<int>(Enumerable.Range(0, 10));
 			BindableLayout.SetItemsSource(layout, itemsSource);
-			Assert.IsTrue(IsLayoutWithItemsSource(itemsSource, layout));
+			Assert.True(IsLayoutWithItemsSource(itemsSource, layout));
 		}
 
-		[Test, Ignore("https://github.com/dotnet/maui/issues/1524")]
-		public void LayoutIsGarbageCollectedAfterItsRemoved()
+		[Fact]
+		public async Task LayoutIsGarbageCollectedAfterItsRemoved()
 		{
 			var layout = new StackLayout
 			{
@@ -266,13 +268,14 @@ namespace Microsoft.Maui.Controls.Core.UnitTests
 			pageRoot.Children.Remove(layout);
 			layout = null;
 
+			await Task.Yield();
 			GC.Collect();
 			GC.WaitForPendingFinalizers();
 
-			Assert.IsFalse(weakReference.IsAlive);
+			Assert.False(weakReference.IsAlive);
 		}
 
-		[Test]
+		[Fact]
 		public void ThrowsExceptionOnUsingDataTemplateSelectorForItemTemplate()
 		{
 			var layout = new StackLayout
@@ -283,10 +286,10 @@ namespace Microsoft.Maui.Controls.Core.UnitTests
 			var itemsSource = new ObservableCollection<int>(Enumerable.Range(0, 10));
 			BindableLayout.SetItemsSource(layout, itemsSource);
 
-			Assert.Throws(typeof(NotSupportedException), () => BindableLayout.SetItemTemplate(layout, new DataTemplateSelectorFrame()));
+			Assert.Throws<NotSupportedException>(() => BindableLayout.SetItemTemplate(layout, new DataTemplateSelectorFrame()));
 		}
 
-		[Test]
+		[Fact]
 		public void DontTrackAfterItemsSourceChanged()
 		{
 			var layout = new StackLayout
@@ -301,10 +304,10 @@ namespace Microsoft.Maui.Controls.Core.UnitTests
 			bool wasCalled = false;
 			layout.ChildAdded += (_, __) => wasCalled = true;
 			itemsSource.Add(11);
-			Assert.IsFalse(wasCalled);
+			Assert.False(wasCalled);
 		}
 
-		[Test]
+		[Fact]
 		public void WorksWithNullItems()
 		{
 			var layout = new StackLayout
@@ -315,10 +318,10 @@ namespace Microsoft.Maui.Controls.Core.UnitTests
 			var itemsSource = new ObservableCollection<int?>(Enumerable.Range(0, 10).Cast<int?>());
 			itemsSource.Add(null);
 			BindableLayout.SetItemsSource(layout, itemsSource);
-			Assert.IsTrue(IsLayoutWithItemsSource(itemsSource, layout));
+			Assert.True(IsLayoutWithItemsSource(itemsSource, layout));
 		}
 
-		[Test]
+		[Fact]
 		public void WorksWithDuplicateItems()
 		{
 			var layout = new StackLayout
@@ -333,14 +336,14 @@ namespace Microsoft.Maui.Controls.Core.UnitTests
 			}
 
 			BindableLayout.SetItemsSource(layout, itemsSource);
-			Assert.IsTrue(IsLayoutWithItemsSource(itemsSource, layout));
+			Assert.True(IsLayoutWithItemsSource(itemsSource, layout));
 
 			itemsSource.Remove(0);
-			Assert.IsTrue(IsLayoutWithItemsSource(itemsSource, layout));
+			Assert.True(IsLayoutWithItemsSource(itemsSource, layout));
 		}
 
 
-		[Test]
+		[Fact]
 		public void ValidateBindableProperties()
 		{
 			var layout = new StackLayout
@@ -352,38 +355,91 @@ namespace Microsoft.Maui.Controls.Core.UnitTests
 			object emptyView = new object();
 			BindableLayout.SetEmptyView(layout, emptyView);
 
-			Assert.AreEqual(emptyView, BindableLayout.GetEmptyView(layout));
-			Assert.AreEqual(emptyView, layout.GetValue(BindableLayout.EmptyViewProperty));
+			Assert.Equal(emptyView, BindableLayout.GetEmptyView(layout));
+			Assert.Equal(emptyView, layout.GetValue(BindableLayout.EmptyViewProperty));
 
 			// EmptyViewTemplateProperty
 			DataTemplate emptyViewTemplate = new DataTemplate(typeof(Label));
 			BindableLayout.SetEmptyViewTemplate(layout, emptyViewTemplate);
 
-			Assert.AreEqual(emptyViewTemplate, BindableLayout.GetEmptyViewTemplate(layout));
-			Assert.AreEqual(emptyViewTemplate, layout.GetValue(BindableLayout.EmptyViewTemplateProperty));
+			Assert.Equal(emptyViewTemplate, BindableLayout.GetEmptyViewTemplate(layout));
+			Assert.Equal(emptyViewTemplate, layout.GetValue(BindableLayout.EmptyViewTemplateProperty));
 
 
 			// ItemsSourceProperty
 			IEnumerable itemsSource = new object[0];
 			BindableLayout.SetItemsSource(layout, itemsSource);
 
-			Assert.AreEqual(itemsSource, BindableLayout.GetItemsSource(layout));
-			Assert.AreEqual(itemsSource, layout.GetValue(BindableLayout.ItemsSourceProperty));
+			Assert.Equal(itemsSource, BindableLayout.GetItemsSource(layout));
+			Assert.Equal(itemsSource, layout.GetValue(BindableLayout.ItemsSourceProperty));
 
 			// ItemTemplateProperty
 			DataTemplate itemTemplate = new DataTemplate(typeof(Label));
 			BindableLayout.SetItemTemplate(layout, itemTemplate);
 
-			Assert.AreEqual(itemTemplate, BindableLayout.GetItemTemplate(layout));
-			Assert.AreEqual(itemTemplate, layout.GetValue(BindableLayout.ItemTemplateProperty));
+			Assert.Equal(itemTemplate, BindableLayout.GetItemTemplate(layout));
+			Assert.Equal(itemTemplate, layout.GetValue(BindableLayout.ItemTemplateProperty));
 
 
 			// ItemTemplateSelectorProperty
 			var itemTemplateSelector = new DataTemplateSelectorFrame();
 			BindableLayout.SetItemTemplateSelector(layout, itemTemplateSelector);
 
-			Assert.AreEqual(itemTemplateSelector, BindableLayout.GetItemTemplateSelector(layout));
-			Assert.AreEqual(itemTemplateSelector, layout.GetValue(BindableLayout.ItemTemplateSelectorProperty));
+			Assert.Equal(itemTemplateSelector, BindableLayout.GetItemTemplateSelector(layout));
+			Assert.Equal(itemTemplateSelector, layout.GetValue(BindableLayout.ItemTemplateSelectorProperty));
+		}
+
+		[Fact]
+		public async Task DoesNotLeak()
+		{
+			WeakReference controllerRef, proxyRef;
+			var list = new ObservableCollection<string> { "Foo", "Bar", "Baz" };
+
+			// Scope for BindableLayout
+			{
+				var layout = new StackLayout { IsPlatformEnabled = true };
+				BindableLayout.SetItemTemplate(layout, new DataTemplate(() => new Label()));
+				BindableLayout.SetItemsSource(layout, list);
+
+				var controller = BindableLayout.GetBindableLayoutController(layout);
+				controllerRef = new WeakReference(controller);
+
+				// BindableLayoutController._collectionChangedProxy
+				var flags = BindingFlags.NonPublic | BindingFlags.Instance;
+				var proxy = controller.GetType().GetField("_collectionChangedProxy", flags).GetValue(controller);
+				Assert.NotNull(proxy);
+				proxyRef = new WeakReference(proxy);
+			}
+
+			// First GC
+			await Task.Yield();
+			GC.Collect();
+			GC.WaitForPendingFinalizers();
+			Assert.False(controllerRef.IsAlive, "BindableLayoutController should not be alive!");
+
+			// Second GC
+			await Task.Yield();
+			GC.Collect();
+			GC.WaitForPendingFinalizers();
+			Assert.False(proxyRef.IsAlive, "WeakCollectionChangedProxy should not be alive!");
+		}
+
+		[Fact("BindableLayout Still Updates after a GC")]
+		public async Task UpdatesAfterGC()
+		{
+			var list = new ObservableCollection<string> { "Foo", "Bar" };
+			var layout = new StackLayout { IsPlatformEnabled = true };
+			BindableLayout.SetItemTemplate(layout, new DataTemplate(() => new Label()));
+			BindableLayout.SetItemsSource(layout, list);
+
+			Assert.Equal(2, layout.Children.Count);
+
+			await Task.Yield();
+			GC.Collect();
+			GC.WaitForPendingFinalizers();
+
+			list.Add("Baz");
+			Assert.Equal(3, layout.Children.Count);
 		}
 
 		// Checks if for every item in the items source there's a corresponding view

@@ -1,4 +1,5 @@
-﻿namespace Microsoft.Maui.Controls
+﻿#nullable disable
+namespace Microsoft.Maui.Controls
 {
 	public partial class Editor
 	{
@@ -16,6 +17,10 @@
 		{
 			// Adjust the mappings to preserve Controls.Editor legacy behaviors
 			EditorHandler.Mapper = ControlsEditorMapper;
+
+#if ANDROID
+			EditorHandler.CommandMapper.PrependToMapping(nameof(IEditor.Focus), MapFocus);
+#endif
 		}
 	}
 }

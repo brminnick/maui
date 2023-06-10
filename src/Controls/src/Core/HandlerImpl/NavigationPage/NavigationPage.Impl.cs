@@ -1,3 +1,4 @@
+#nullable disable
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -12,7 +13,7 @@ using Microsoft.Maui.Layouts;
 
 namespace Microsoft.Maui.Controls
 {
-	/// <include file="../../../../docs/Microsoft.Maui.Controls/NavigationPage.xml" path="Type[@FullName='Microsoft.Maui.Controls.NavigationPage']/Docs" />
+	/// <include file="../../../../docs/Microsoft.Maui.Controls/NavigationPage.xml" path="Type[@FullName='Microsoft.Maui.Controls.NavigationPage']/Docs/*" />
 	public partial class NavigationPage : IStackNavigationView, IToolbarElement
 	{
 		// If the user is making overlapping navigation requests this is used to fire once all navigation 
@@ -23,11 +24,12 @@ namespace Microsoft.Maui.Controls
 		TaskCompletionSource<object> _currentNavigationCompletionSource;
 
 		int _waitingCount = 0;
+		NavigationPageToolbar _toolbar;
 		readonly SemaphoreSlim SemaphoreSlim = new SemaphoreSlim(1, 1);
 
 		partial void Init()
 		{
-			this.Appearing += OnAppearing;
+			(this as IControlsVisualElement).WindowChanged += OnWindowChanged;
 		}
 
 		Thickness IView.Margin => Thickness.Zero;
@@ -110,7 +112,10 @@ namespace Microsoft.Maui.Controls
 			if (this.Toolbar != null)
 				return Toolbar;
 
-			var rootPage = this.FindParentWith(x => (x is IWindow te || Navigation.ModalStack.Contains(x)), true);
+			if (this.Window is null)
+				return null;
+
+			var rootPage = this.FindParentWith(x => (x is IWindow te || Window.Navigation.ModalStack.Contains(x)), true);
 			if (this.FindParentWith(x => (x is IToolbarElement te && te.Toolbar != null), false) is IToolbarElement te)
 			{
 				// This means I'm inside a Modal Page so we shouldn't return the Toolbar from the window
@@ -123,33 +128,53 @@ namespace Microsoft.Maui.Controls
 			return null;
 		}
 
-		void OnAppearing(object sender, EventArgs e)
+		void OnWindowChanged(object sender, EventArgs e)
 		{
+			// If this NavigationPage is removed from the window
+			// Then we just invalidate the toolbar that this NavigationPage created
+			if (this.Window is null)
+			{
+				if (_toolbar is not null)
+				{
+					if (_toolbar.Parent is Window w &&
+						w.Toolbar == _toolbar)
+					{
+						w.Toolbar = null;
+					}
+
+					_toolbar.Disconnect();
+					_toolbar = null;
+				}
+
+				return;
+			}
+
 			// Update the Container level Toolbar with my Toolbar information
 			if (FindMyToolbar() is not NavigationPageToolbar)
 			{
-				// If the root is a flyoutpage then we set the toolbar on the flyout page
+				// If the root is a FlyoutPage then we set the toolbar on the flyout page
 				var flyoutPage = this.FindParentOfType<FlyoutPage>();
+
 				if (flyoutPage != null && flyoutPage.Parent is IWindow)
 				{
-					var toolbar = new NavigationPageToolbar(flyoutPage, flyoutPage);
-					flyoutPage.Toolbar = toolbar;
+					_toolbar = new NavigationPageToolbar(flyoutPage, flyoutPage);
+					flyoutPage.Toolbar = _toolbar;
 				}
 				// Is the root a modal page?
 				else
 				{
 					// Is the root the window or is this part of a modal stack
-					var rootPage = this.FindParentWith(x => (x is IWindow te || Navigation.ModalStack.Contains(x)), true);
+					var rootPage = this.FindParentWith(x => (x is IWindow te || Window.Navigation.ModalStack.Contains(x)), true);
 
 					if (rootPage is Window w)
 					{
-						var toolbar = new NavigationPageToolbar(w, w.Page);
-						w.Toolbar = toolbar;
+						_toolbar = new NavigationPageToolbar(w, w.Page);
+						w.Toolbar = _toolbar;
 					}
 					else if (rootPage is Page p)
 					{
-						var toolbar = new NavigationPageToolbar(p, p);
-						p.Toolbar = toolbar;
+						_toolbar = new NavigationPageToolbar(p, p);
+						p.Toolbar = _toolbar;
 					}
 				}
 			}
@@ -180,32 +205,36 @@ namespace Microsoft.Maui.Controls
 				// Wait for pending navigation tasks to finish
 				await SemaphoreSlim.WaitAsync();
 
-				var currentNavRequestTaskSource = new TaskCompletionSource<object>();
-				_allPendingNavigationCompletionSource ??= new TaskCompletionSource<object>();
-
-				if (CurrentNavigationTask == null)
+				// If our handler was removed while waiting then don't do anything
+				if (Handler != null)
 				{
-					CurrentNavigationTask = _allPendingNavigationCompletionSource.Task;
+					var currentNavRequestTaskSource = new TaskCompletionSource<object>();
+					_allPendingNavigationCompletionSource ??= new TaskCompletionSource<object>();
+
+					if (CurrentNavigationTask == null)
+					{
+						CurrentNavigationTask = _allPendingNavigationCompletionSource.Task;
+					}
+					else if (CurrentNavigationTask != _allPendingNavigationCompletionSource.Task)
+					{
+						throw new InvalidOperationException("Pending Navigations still processing");
+					}
+
+					_currentNavigationCompletionSource = currentNavRequestTaskSource;
+
+					// We create a new list to send to the handler because the structure backing 
+					// The Navigation stack isn't immutable
+					var immutableNavigationStack = new List<IView>(NavigationStack);
+					firePostNavigatingEvents?.Invoke();
+
+					// Create the request for the handler
+					var request = new NavigationRequest(immutableNavigationStack, animated);
+					((IStackNavigation)this).RequestNavigation(request);
+
+					// Wait for the handler to finish processing the navigation
+					// This task completes once the handler calls INavigationView.Finished
+					await currentNavRequestTaskSource.Task;
 				}
-				else if (CurrentNavigationTask != _allPendingNavigationCompletionSource.Task)
-				{
-					throw new InvalidOperationException("Pending Navigations still processing");
-				}
-
-				_currentNavigationCompletionSource = currentNavRequestTaskSource;
-
-				// We create a new list to send to the handler because the structure backing 
-				// The Navigation stack isn't immutable
-				var immutableNavigationStack = new List<IView>(NavigationStack);
-				firePostNavigatingEvents?.Invoke();
-
-				// Create the request for the handler
-				var request = new NavigationRequest(immutableNavigationStack, animated);
-				((IStackNavigation)this).RequestNavigation(request);
-
-				// Wait for the handler to finish processing the navigation
-				// This task completes once the handler calls INavigationView.Finished
-				await currentNavRequestTaskSource.Task;
 			}
 			finally
 			{
@@ -226,15 +255,6 @@ namespace Microsoft.Maui.Controls
 		{
 			base.OnHandlerChangedCore();
 
-			if (Handler == null && FindMyToolbar() is IToolbar tb)
-			{
-				tb.Handler = null;
-				if (tb.Parent is Window w)
-					w.Toolbar = null;
-				else if (tb.Parent is Page p)
-					p.Toolbar = null;
-			}
-
 			if (Navigation is MauiNavigationImpl && InternalChildren.Count > 0)
 			{
 				var navStack = Navigation.NavigationStack;
@@ -252,6 +272,13 @@ namespace Microsoft.Maui.Controls
 					SendNavigated(null);
 				})
 				.FireAndForget(Handler);
+			}
+
+			// If the handler is disconnected and we're still waiting for updates from the handler
+			// Just complete any waits
+			if (Handler == null && _waitingCount > 0)
+			{
+				((IStackNavigation)this).NavigationFinished(this.NavigationStack);
 			}
 		}
 

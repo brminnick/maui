@@ -7,12 +7,16 @@ using Xunit;
 namespace Microsoft.Maui.DeviceTests
 {
 	[Category(TestCategory.SearchBar)]
-	public partial class SearchBarHandlerTests : HandlerTestBase<SearchBarHandler, SearchBarStub>
+	public partial class SearchBarHandlerTests : CoreHandlerTestBase<SearchBarHandler, SearchBarStub>
 	{
-		[Theory(DisplayName = "Background Initializes Correctly")]
-		[InlineData(0xFF0000)]
-		[InlineData(0x00FF00)]
-		[InlineData(0x0000FF)]
+		[Theory(DisplayName = "Background Initializes Correctly"
+#if IOS
+			, Skip = "This test is currently invalid on iOS https://github.com/dotnet/maui/issues/13693"
+#endif
+			)]
+		[InlineData(0xFFFF0000)]
+		[InlineData(0xFF00FF00)]
+		[InlineData(0xFF0000FF)]
 		public async Task BackgroundInitializesCorrectly(uint color)
 		{
 			var expected = Color.FromUint(color);
@@ -20,7 +24,7 @@ namespace Microsoft.Maui.DeviceTests
 			var searchBar = new SearchBarStub
 			{
 				Background = new SolidPaintStub(expected),
-				Text = "Background"
+				Text = "Background",
 			};
 
 			await ValidateHasColor(searchBar, expected);
@@ -121,10 +125,12 @@ namespace Microsoft.Maui.DeviceTests
 		{
 			var searchBar = new SearchBarStub()
 			{
-				CancelButtonColor = Colors.MediumPurple
+				Text = "Search",
+				Width = 200,
+				CancelButtonColor = Colors.Yellow,
 			};
 
-			await ValidateHasColor(searchBar, Colors.MediumPurple, () => searchBar.CancelButtonColor = Colors.MediumPurple);
+			await ValidateHasColor(searchBar, Colors.Yellow);
 		}
 
 		[Fact(DisplayName = "Null Cancel Button Color Doesn't Crash")]
@@ -138,6 +144,23 @@ namespace Microsoft.Maui.DeviceTests
 			await CreateHandlerAsync(searchBar);
 		}
 
+		[Fact(DisplayName = "Default Input Field is at least 44dp high")]
+		public async Task DefaultInputFieldIsAtLeast44DpHigh()
+		{
+			var searchBar = new SearchBarStub()
+			{
+				Text = "search bar text",
+				Width = 200
+			};
+
+			await AttachAndRun(searchBar, (handler) =>
+			{
+				var height = GetInputFieldHeight(handler);
+				Assert.True(height >= 44);
+			});
+		}
+
+#if !WINDOWS
 		[Theory]
 		[InlineData(true)]
 		[InlineData(false)]
@@ -152,23 +175,149 @@ namespace Microsoft.Maui.DeviceTests
 			await ValidatePropertyInitValue(searchBar, () => searchBar.IsReadOnly, GetNativeIsReadOnly, searchBar.IsReadOnly);
 		}
 
+		[Theory(DisplayName = "Validates Numeric Keyboard")]
+		[InlineData(nameof(Keyboard.Chat), false)]
+		[InlineData(nameof(Keyboard.Default), false)]
+		[InlineData(nameof(Keyboard.Email), false)]
+		[InlineData(nameof(Keyboard.Numeric), true)]
+		[InlineData(nameof(Keyboard.Plain), false)]
+		[InlineData(nameof(Keyboard.Telephone), false)]
+		[InlineData(nameof(Keyboard.Text), false)]
+		[InlineData(nameof(Keyboard.Url), false)]
+		public async Task ValidateNumericKeyboard(string keyboardName, bool expected)
+		{
+			var keyboard = (Keyboard)typeof(Keyboard).GetProperty(keyboardName).GetValue(null);
+
+			var searchBar = new SearchBarStub() { Keyboard = keyboard };
+
+			await ValidatePropertyInitValue(searchBar, () => expected, GetNativeIsNumericKeyboard, expected);
+		}
+
+		[Theory(DisplayName = "Validates Email Keyboard")]
+		[InlineData(nameof(Keyboard.Chat), false)]
+		[InlineData(nameof(Keyboard.Default), false)]
+		[InlineData(nameof(Keyboard.Email), true)]
+		[InlineData(nameof(Keyboard.Numeric), false)]
+		[InlineData(nameof(Keyboard.Plain), false)]
+		[InlineData(nameof(Keyboard.Telephone), false)]
+		[InlineData(nameof(Keyboard.Text), false)]
+		[InlineData(nameof(Keyboard.Url), false)]
+		public async Task ValidateEmailKeyboard(string keyboardName, bool expected)
+		{
+			var keyboard = (Keyboard)typeof(Keyboard).GetProperty(keyboardName).GetValue(null);
+
+			var searchBar = new SearchBarStub() { Keyboard = keyboard };
+
+			await ValidatePropertyInitValue(searchBar, () => expected, GetNativeIsEmailKeyboard, expected);
+		}
+
+		[Theory(DisplayName = "Validates Telephone Keyboard")]
+		[InlineData(nameof(Keyboard.Chat), false)]
+		[InlineData(nameof(Keyboard.Default), false)]
+		[InlineData(nameof(Keyboard.Email), false)]
+		[InlineData(nameof(Keyboard.Numeric), false)]
+		[InlineData(nameof(Keyboard.Plain), false)]
+		[InlineData(nameof(Keyboard.Telephone), true)]
+		[InlineData(nameof(Keyboard.Text), false)]
+		[InlineData(nameof(Keyboard.Url), false)]
+		public async Task ValidateTelephoneKeyboard(string keyboardName, bool expected)
+		{
+			var keyboard = (Keyboard)typeof(Keyboard).GetProperty(keyboardName).GetValue(null);
+
+			var searchBar = new SearchBarStub() { Keyboard = keyboard };
+
+			await ValidatePropertyInitValue(searchBar, () => expected, GetNativeIsTelephoneKeyboard, expected);
+		}
+
+		[Theory(DisplayName = "Validates Url Keyboard")]
+		[InlineData(nameof(Keyboard.Chat), false)]
+		[InlineData(nameof(Keyboard.Default), false)]
+		[InlineData(nameof(Keyboard.Email), false)]
+		[InlineData(nameof(Keyboard.Numeric), false)]
+		[InlineData(nameof(Keyboard.Plain), false)]
+		[InlineData(nameof(Keyboard.Telephone), false)]
+		[InlineData(nameof(Keyboard.Text), false)]
+		[InlineData(nameof(Keyboard.Url), true)]
+		public async Task ValidateUrlKeyboard(string keyboardName, bool expected)
+		{
+			var keyboard = (Keyboard)typeof(Keyboard).GetProperty(keyboardName).GetValue(null);
+
+			var searchBar = new SearchBarStub() { Keyboard = keyboard };
+
+			await ValidatePropertyInitValue(searchBar, () => expected, GetNativeIsUrlKeyboard, expected);
+		}
+
+		[Theory(DisplayName = "Validates Text Keyboard")]
+		[InlineData(nameof(Keyboard.Chat), false)]
+		[InlineData(nameof(Keyboard.Email), false)]
+		[InlineData(nameof(Keyboard.Numeric), false)]
+		[InlineData(nameof(Keyboard.Telephone), false)]
+		[InlineData(nameof(Keyboard.Text), true)]
+		[InlineData(nameof(Keyboard.Url), false)]
+#if WINDOWS
+		// The Text keyboard is the default one on Windows
+		[InlineData(nameof(Keyboard.Default), true)]
+		// Plain is the same as the Default keyboard on Windows
+		[InlineData(nameof(Keyboard.Plain), true)]
+#else
+		[InlineData(nameof(Keyboard.Default), false)]
+		[InlineData(nameof(Keyboard.Plain), false)]
+#endif
+		public async Task ValidateTextKeyboard(string keyboardName, bool expected)
+		{
+			var keyboard = (Keyboard)typeof(Keyboard).GetProperty(keyboardName).GetValue(null);
+
+			var searchBar = new SearchBarStub() { Keyboard = keyboard };
+
+			await ValidatePropertyInitValue(searchBar, () => expected, GetNativeIsTextKeyboard, expected);
+		}
+
+		[Theory(DisplayName = "Validates Chat Keyboard")]
+		[InlineData(nameof(Keyboard.Chat), true)]
+		[InlineData(nameof(Keyboard.Default), false)]
+		[InlineData(nameof(Keyboard.Email), false)]
+		[InlineData(nameof(Keyboard.Numeric), false)]
+		[InlineData(nameof(Keyboard.Plain), false)]
+		[InlineData(nameof(Keyboard.Telephone), false)]
+		[InlineData(nameof(Keyboard.Text), false)]
+		[InlineData(nameof(Keyboard.Url), false)]
+		public async Task ValidateChatKeyboard(string keyboardName, bool expected)
+		{
+			var keyboard = (Keyboard)typeof(Keyboard).GetProperty(keyboardName).GetValue(null);
+
+			var searchBar = new SearchBarStub() { Keyboard = keyboard };
+
+			await ValidatePropertyInitValue(searchBar, () => expected, GetNativeIsChatKeyboard, expected);
+		}
+#endif
+
+		[Category(TestCategory.SearchBar)]
+		public class SearchBarTextStyleTests : TextStyleHandlerTests<SearchBarHandler, SearchBarStub>
+		{
+		}
+
 		[Category(TestCategory.SearchBar)]
 		public class SearchBarTextInputTests : TextInputHandlerTests<SearchBarHandler, SearchBarStub>
 		{
-			protected override void SetNativeText(SearchBarHandler searchBarHandler, string text)
-			{
+			protected override void SetNativeText(SearchBarHandler searchBarHandler, string text) =>
 				SearchBarHandlerTests.SetNativeText(searchBarHandler, text);
-			}
 
-			protected override int GetCursorStartPosition(SearchBarHandler searchBarHandler)
-			{
-				return SearchBarHandlerTests.GetCursorStartPosition(searchBarHandler);
-			}
+			protected override int GetCursorStartPosition(SearchBarHandler searchBarHandler) =>
+				SearchBarHandlerTests.GetCursorStartPosition(searchBarHandler);
 
-			protected override void UpdateCursorStartPosition(SearchBarHandler searchBarHandler, int position)
-			{
+			protected override void UpdateCursorStartPosition(SearchBarHandler searchBarHandler, int position) =>
 				SearchBarHandlerTests.UpdateCursorStartPosition(searchBarHandler, position);
+		}
+
+		// TODO: only iOS is working with the search bar focus tests
+#if IOS || MACCATALYST
+		[Category(TestCategory.SearchBar)]
+		public class SearchBarFocusTests : FocusHandlerTests<SearchBarHandler, SearchBarStub, VerticalStackLayoutStub>
+		{
+			public SearchBarFocusTests()
+			{
 			}
 		}
+#endif
 	}
 }

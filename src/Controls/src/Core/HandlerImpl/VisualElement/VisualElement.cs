@@ -1,11 +1,12 @@
+#nullable disable
+using System;
 using Microsoft.Maui.Handlers;
 
 namespace Microsoft.Maui.Controls
 {
-	/// <include file="../../../../docs/Microsoft.Maui.Controls/VisualElement.xml" path="Type[@FullName='Microsoft.Maui.Controls.VisualElement']/Docs" />
+	/// <include file="../../../../docs/Microsoft.Maui.Controls/VisualElement.xml" path="Type[@FullName='Microsoft.Maui.Controls.VisualElement']/Docs/*" />
 	public partial class VisualElement
 	{
-		/// <include file="../../../../docs/Microsoft.Maui.Controls/VisualElement.xml" path="//Member[@MemberName='ControlsVisualElementMapper']/Docs" />
 		public static IPropertyMapper<IView, IViewHandler> ControlsVisualElementMapper =
 			new PropertyMapper<IView, IViewHandler>(Element.ControlsElementMapper)
 			{
@@ -17,14 +18,19 @@ namespace Microsoft.Maui.Controls
 #endif
 				[nameof(BackgroundColor)] = MapBackgroundColor,
 				[nameof(Page.BackgroundImageSource)] = MapBackgroundImageSource,
+				[SemanticProperties.DescriptionProperty.PropertyName] = MapSemanticPropertiesDescriptionProperty,
+				[SemanticProperties.HintProperty.PropertyName] = MapSemanticPropertiesHintProperty,
+				[SemanticProperties.HeadingLevelProperty.PropertyName] = MapSemanticPropertiesHeadingLevelProperty,
+				[nameof(IViewHandler.ContainerView)] = MapContainerView,
 			};
 
 		internal static void RemapForControls()
 		{
 			ViewHandler.ViewMapper = ControlsVisualElementMapper;
+
+			ViewHandler.ViewCommandMapper.ModifyMapping<VisualElement, IViewHandler>(nameof(IView.Focus), MapFocus);
 		}
 
-		/// <include file="../../../../docs/Microsoft.Maui.Controls/VisualElement.xml" path="//Member[@MemberName='MapBackgroundColor']/Docs" />
 		public static void MapBackgroundColor(IViewHandler handler, IView view)
 		{
 			handler.UpdateValue(nameof(Background));
@@ -33,6 +39,39 @@ namespace Microsoft.Maui.Controls
 		public static void MapBackgroundImageSource(IViewHandler handler, IView view)
 		{
 			handler.UpdateValue(nameof(Background));
+		}
+
+		static void MapSemanticPropertiesHeadingLevelProperty(IViewHandler handler, IView element) =>
+			(element as VisualElement)?.UpdateSemanticsFromMapper();
+
+		static void MapSemanticPropertiesHintProperty(IViewHandler handler, IView element) =>
+			(element as VisualElement)?.UpdateSemanticsFromMapper();
+
+		static void MapSemanticPropertiesDescriptionProperty(IViewHandler handler, IView element) =>
+			(element as VisualElement)?.UpdateSemanticsFromMapper();
+
+		void UpdateSemanticsFromMapper()
+		{
+			UpdateSemantics();
+			Handler?.UpdateValue(nameof(IView.Semantics));
+		}
+
+		static void MapContainerView(IViewHandler arg1, IView arg2)
+		{
+			Element.ControlsElementMapper.UpdateProperty(arg1, arg2, nameof(IViewHandler.ContainerView));
+
+			if (arg2 is VisualElement ve)
+			{
+				ve._platformContainerViewChanged?.Invoke(arg2, EventArgs.Empty);
+			}
+		}
+
+		static void MapFocus(IViewHandler handler, VisualElement view, object args, Action<IElementHandler, IElement, object> baseMethod)
+		{
+			if (args is not FocusRequest fr)
+				return;
+
+			view.MapFocus(fr, baseMethod is null ? null : () => baseMethod?.Invoke(handler, view, args));
 		}
 	}
 }

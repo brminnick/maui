@@ -9,7 +9,7 @@ using NUnit.Framework;
 using Microsoft.Maui.Controls.Compatibility.UITests;
 #endif
 
-namespace Microsoft.Maui.Controls.Compatibility.ControlGallery.Issues
+namespace Microsoft.Maui.Controls.ControlGallery.Issues
 {
 
 #if UITEST
@@ -72,19 +72,19 @@ namespace Microsoft.Maui.Controls.Compatibility.ControlGallery.Issues
 				Pins = {
 					(colosseum = new Pin {
 						Type = PinType.Place,
-						Position = new Position (41.890202, 12.492049),
+						Location = new Devices.Sensors.Location (41.890202, 12.492049),
 						Label = "Colosseum",
 						Address = "Piazza del Colosseo, 00184 Rome, Province of Rome, Italy"
 					}),
 					(pantheon = new Pin {
 						Type = PinType.Place,
-						Position = new Position (41.898652, 12.476831),
+						Location = new Devices.Sensors.Location (41.898652, 12.476831),
 						Label = "Pantheon",
 						Address = "Piazza della Rotunda, 00186 Rome, Province of Rome, Italy"
 					}),
 					(chapel = new Pin {
 						Type = PinType.Place,
-						Position = new Position (41.903209, 12.454545),
+						Location = new Devices.Sensors.Location (41.903209, 12.454545),
 						Label = "Sistine Chapel",
 						Address = "Piazza della Rotunda, 00186 Rome, Province of Rome, Italy"
 					})
@@ -95,6 +95,7 @@ namespace Microsoft.Maui.Controls.Compatibility.ControlGallery.Issues
 		}
 
 #if UITEST
+[Microsoft.Maui.Controls.Compatibility.UITests.FailsOnMauiAndroid]
 		[Test]
 		public void Bugzilla26171Test()
 		{

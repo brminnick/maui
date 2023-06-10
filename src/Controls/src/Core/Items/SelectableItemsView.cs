@@ -1,24 +1,25 @@
+#nullable disable
 using System;
 using System.Collections.Generic;
 using System.Windows.Input;
 
 namespace Microsoft.Maui.Controls
 {
-	/// <include file="../../../docs/Microsoft.Maui.Controls/SelectableItemsView.xml" path="Type[@FullName='Microsoft.Maui.Controls.SelectableItemsView']/Docs" />
+	/// <include file="../../../docs/Microsoft.Maui.Controls/SelectableItemsView.xml" path="Type[@FullName='Microsoft.Maui.Controls.SelectableItemsView']/Docs/*" />
 	public class SelectableItemsView : StructuredItemsView
 	{
-		/// <include file="../../../docs/Microsoft.Maui.Controls/SelectableItemsView.xml" path="//Member[@MemberName='SelectionModeProperty']/Docs" />
+		/// <summary>Bindable property for <see cref="SelectionMode"/>.</summary>
 		public static readonly BindableProperty SelectionModeProperty =
 			BindableProperty.Create(nameof(SelectionMode), typeof(SelectionMode), typeof(SelectableItemsView),
 				SelectionMode.None, propertyChanged: SelectionModePropertyChanged);
 
-		/// <include file="../../../docs/Microsoft.Maui.Controls/SelectableItemsView.xml" path="//Member[@MemberName='SelectedItemProperty']/Docs" />
+		/// <summary>Bindable property for <see cref="SelectedItem"/>.</summary>
 		public static readonly BindableProperty SelectedItemProperty =
 			BindableProperty.Create(nameof(SelectedItem), typeof(object), typeof(SelectableItemsView), default(object),
 				defaultBindingMode: BindingMode.TwoWay,
 				propertyChanged: SelectedItemPropertyChanged);
 
-		/// <include file="../../../docs/Microsoft.Maui.Controls/SelectableItemsView.xml" path="//Member[@MemberName='SelectedItemsProperty']/Docs" />
+		/// <summary>Bindable property for <see cref="SelectedItems"/>.</summary>
 		public static readonly BindableProperty SelectedItemsProperty =
 			BindableProperty.Create(nameof(SelectedItems), typeof(IList<object>), typeof(SelectableItemsView), null,
 				defaultBindingMode: BindingMode.OneWay,
@@ -26,11 +27,11 @@ namespace Microsoft.Maui.Controls
 				coerceValue: CoerceSelectedItems,
 				defaultValueCreator: DefaultValueCreator);
 
-		/// <include file="../../../docs/Microsoft.Maui.Controls/SelectableItemsView.xml" path="//Member[@MemberName='SelectionChangedCommandProperty']/Docs" />
+		/// <summary>Bindable property for <see cref="SelectionChangedCommand"/>.</summary>
 		public static readonly BindableProperty SelectionChangedCommandProperty =
 			BindableProperty.Create(nameof(SelectionChangedCommand), typeof(ICommand), typeof(SelectableItemsView));
 
-		/// <include file="../../../docs/Microsoft.Maui.Controls/SelectableItemsView.xml" path="//Member[@MemberName='SelectionChangedCommandParameterProperty']/Docs" />
+		/// <summary>Bindable property for <see cref="SelectionChangedCommandParameter"/>.</summary>
 		public static readonly BindableProperty SelectionChangedCommandParameterProperty =
 			BindableProperty.Create(nameof(SelectionChangedCommandParameter), typeof(object),
 				typeof(SelectableItemsView));
@@ -39,40 +40,40 @@ namespace Microsoft.Maui.Controls
 
 		bool _suppressSelectionChangeNotification;
 
-		/// <include file="../../../docs/Microsoft.Maui.Controls/SelectableItemsView.xml" path="//Member[@MemberName='.ctor']/Docs" />
+		/// <include file="../../../docs/Microsoft.Maui.Controls/SelectableItemsView.xml" path="//Member[@MemberName='.ctor']/Docs/*" />
 		public SelectableItemsView()
 		{
 		}
 
-		/// <include file="../../../docs/Microsoft.Maui.Controls/SelectableItemsView.xml" path="//Member[@MemberName='SelectedItem']/Docs" />
+		/// <include file="../../../docs/Microsoft.Maui.Controls/SelectableItemsView.xml" path="//Member[@MemberName='SelectedItem']/Docs/*" />
 		public object SelectedItem
 		{
 			get => GetValue(SelectedItemProperty);
 			set => SetValue(SelectedItemProperty, value);
 		}
 
-		/// <include file="../../../docs/Microsoft.Maui.Controls/SelectableItemsView.xml" path="//Member[@MemberName='SelectedItems']/Docs" />
+		/// <include file="../../../docs/Microsoft.Maui.Controls/SelectableItemsView.xml" path="//Member[@MemberName='SelectedItems']/Docs/*" />
 		public IList<object> SelectedItems
 		{
 			get => (IList<object>)GetValue(SelectedItemsProperty);
 			set => SetValue(SelectedItemsProperty, new SelectionList(this, value));
 		}
 
-		/// <include file="../../../docs/Microsoft.Maui.Controls/SelectableItemsView.xml" path="//Member[@MemberName='SelectionChangedCommand']/Docs" />
+		/// <include file="../../../docs/Microsoft.Maui.Controls/SelectableItemsView.xml" path="//Member[@MemberName='SelectionChangedCommand']/Docs/*" />
 		public ICommand SelectionChangedCommand
 		{
 			get => (ICommand)GetValue(SelectionChangedCommandProperty);
 			set => SetValue(SelectionChangedCommandProperty, value);
 		}
 
-		/// <include file="../../../docs/Microsoft.Maui.Controls/SelectableItemsView.xml" path="//Member[@MemberName='SelectionChangedCommandParameter']/Docs" />
+		/// <include file="../../../docs/Microsoft.Maui.Controls/SelectableItemsView.xml" path="//Member[@MemberName='SelectionChangedCommandParameter']/Docs/*" />
 		public object SelectionChangedCommandParameter
 		{
 			get => GetValue(SelectionChangedCommandParameterProperty);
 			set => SetValue(SelectionChangedCommandParameterProperty, value);
 		}
 
-		/// <include file="../../../docs/Microsoft.Maui.Controls/SelectableItemsView.xml" path="//Member[@MemberName='SelectionMode']/Docs" />
+		/// <include file="../../../docs/Microsoft.Maui.Controls/SelectableItemsView.xml" path="//Member[@MemberName='SelectionMode']/Docs/*" />
 		public SelectionMode SelectionMode
 		{
 			get => (SelectionMode)GetValue(SelectionModeProperty);
@@ -81,7 +82,7 @@ namespace Microsoft.Maui.Controls
 
 		public event EventHandler<SelectionChangedEventArgs> SelectionChanged;
 
-		/// <include file="../../../docs/Microsoft.Maui.Controls/SelectableItemsView.xml" path="//Member[@MemberName='UpdateSelectedItems']/Docs" />
+		/// <include file="../../../docs/Microsoft.Maui.Controls/SelectableItemsView.xml" path="//Member[@MemberName='UpdateSelectedItems']/Docs/*" />
 		public void UpdateSelectedItems(IList<object> newSelection)
 		{
 			var oldSelection = new List<object>(SelectedItems);

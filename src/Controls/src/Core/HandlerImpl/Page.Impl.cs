@@ -1,10 +1,11 @@
-﻿using System;
+#nullable disable
+using System;
 using Microsoft.Maui.Controls.Internals;
 using Microsoft.Maui.Graphics;
 
 namespace Microsoft.Maui.Controls
 {
-	/// <include file="../../../docs/Microsoft.Maui.Controls/Page.xml" path="Type[@FullName='Microsoft.Maui.Controls.Page']/Docs" />
+	/// <include file="../../../docs/Microsoft.Maui.Controls/Page.xml" path="Type[@FullName='Microsoft.Maui.Controls.Page']/Docs/*" />
 	public partial class Page : IView, ITitledElement, IToolbarElement
 	{
 		internal bool HasNavigatedTo { get; private set; }
@@ -45,12 +46,14 @@ namespace Microsoft.Maui.Controls
 			HasNavigatedTo = true;
 			NavigatedTo?.Invoke(this, args);
 			OnNavigatedTo(args);
+			(this as IPageContainer<Page>)?.CurrentPage?.SendNavigatedTo(args);
 		}
 
 		internal void SendNavigatingFrom(NavigatingFromEventArgs args)
 		{
 			NavigatingFrom?.Invoke(this, args);
 			OnNavigatingFrom(args);
+			(this as IPageContainer<Page>)?.CurrentPage?.SendNavigatingFrom(args);
 		}
 
 		internal void SendNavigatedFrom(NavigatedFromEventArgs args)
@@ -58,6 +61,7 @@ namespace Microsoft.Maui.Controls
 			HasNavigatedTo = false;
 			NavigatedFrom?.Invoke(this, args);
 			OnNavigatedFrom(args);
+			(this as IPageContainer<Page>)?.CurrentPage?.SendNavigatedFrom(args);
 		}
 
 		public event EventHandler<NavigatedToEventArgs> NavigatedTo;
@@ -68,7 +72,6 @@ namespace Microsoft.Maui.Controls
 		protected virtual void OnNavigatingFrom(NavigatingFromEventArgs args) { }
 		protected virtual void OnNavigatedFrom(NavigatedFromEventArgs args) { }
 
-		/// <include file="../../../docs/Microsoft.Maui.Controls/Page.xml" path="//Member[@MemberName='GetParentWindow']/Docs" />
 		public virtual Window GetParentWindow()
 			=> this.FindParentOfType<Window>();
 	}
