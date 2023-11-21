@@ -169,6 +169,7 @@ namespace Microsoft.Maui.Controls.Platform
 				// or if we need to switch DataTemplates (because this instance is being recycled)
 				// then we'll need to create the content from the template 
 				_visualElement = formsTemplate.CreateContent(dataContext, container) as VisualElement;
+				_visualElement.BindingContext = dataContext;
 				_renderer = _visualElement.ToHandler(mauiContext);
 
 				// We need to set IsPlatformStateConsistent explicitly; otherwise, it won't be set until the renderer's Loaded 
@@ -186,11 +187,11 @@ namespace Microsoft.Maui.Controls.Platform
 			{
 				// We are reusing this ItemContentControl and we can reuse the Element
 				_visualElement = _renderer.VirtualView as VisualElement;
+				_visualElement.BindingContext = dataContext;
 			}
 
 			Content = _renderer.ToPlatform();
 			itemsView?.AddLogicalChild(_visualElement);
-			_visualElement.BindingContext = dataContext;
 		}
 
 		void SetNativeStateConsistent(VisualElement visualElement)
@@ -263,6 +264,22 @@ namespace Microsoft.Maui.Controls.Platform
 			this.SetAutomationPropertiesAccessibilityView(_visualElement, defaultAccessibilityView);
 		}
 
+		/// <inheritdoc/>
+		protected override WSize ArrangeOverride(WSize finalSize)
+		{
+			if (_renderer == null)
+			{
+				return base.ArrangeOverride(finalSize);
+			}
+
+			var width = ItemWidth == default ? finalSize.Width : ItemWidth;
+			var height = ItemHeight == default ? finalSize.Height : ItemHeight;
+			var size = new WSize(width, height);
+
+			return base.ArrangeOverride(size);
+		}
+
+		/// <inheritdoc/>
 		protected override WSize MeasureOverride(WSize availableSize)
 		{
 			if (_renderer == null)
@@ -270,51 +287,25 @@ namespace Microsoft.Maui.Controls.Platform
 				return base.MeasureOverride(availableSize);
 			}
 
+			var width = ItemWidth == default ? availableSize.Width : ItemWidth;
+			var height = ItemHeight == default ? availableSize.Height : ItemHeight;
+			var measuredSize = base.MeasureOverride(new WSize(width, height));
+			var finalWidth = Max(measuredSize.Width, ItemWidth);
+			var finalHeight = Max(measuredSize.Height, ItemHeight);
+			var finalSize = new WSize(finalWidth, finalHeight);
 			var frameworkElement = Content as FrameworkElement;
-			var formsElement = _renderer.VirtualView as VisualElement;
+			var visualElement = _renderer.VirtualView as VisualElement;
 			var margin = _renderer.VirtualView.Margin;
 
-			if (ItemHeight != default || ItemWidth != default)
+			frameworkElement.Margin = WinUIHelpers.CreateThickness(margin.Left, margin.Top, margin.Right, margin.Bottom);
+			visualElement.Layout(new Rect(0, 0, finalWidth, finalHeight));
+
+			if (CanMeasureContent(frameworkElement))
 			{
-				formsElement.Layout(new Rect(0, 0, ItemWidth, ItemHeight));
-
-				var wsize = new WSize(ItemWidth, ItemHeight);
-
-				frameworkElement.Margin =
-					WinUIHelpers.CreateThickness(
-						margin.Left + ItemSpacing.Left,
-						margin.Top + ItemSpacing.Top,
-						margin.Right + ItemSpacing.Right,
-						margin.Bottom + ItemSpacing.Bottom);
-
-				if (CanMeasureContent(frameworkElement))
-					frameworkElement.Measure(wsize);
-
-				return base.MeasureOverride(wsize);
+				frameworkElement.Measure(finalSize);
 			}
-			else
-			{
-				var (width, height) = formsElement.Measure(availableSize.Width, availableSize.Height,
-					MeasureFlags.IncludeMargins).Request;
 
-				width = Max(width, availableSize.Width);
-				height = Max(height, availableSize.Height);
-
-				formsElement.Layout(new Rect(0, 0, width, height));
-
-				var wsize = new WSize(width, height);
-
-				frameworkElement.Margin = WinUIHelpers.CreateThickness(
-					margin.Left,
-					margin.Top,
-					margin.Right,
-					margin.Bottom);
-
-				if (CanMeasureContent(frameworkElement))
-					frameworkElement.Measure(wsize);
-
-				return base.MeasureOverride(wsize);
-			}
+			return finalSize;
 		}
 
 		double Max(double requested, double available)
@@ -335,5 +326,7 @@ namespace Microsoft.Maui.Controls.Platform
 
 			return true;
 		}
+
+		internal VisualElement GetVisualElement() => _visualElement;
 	}
 }

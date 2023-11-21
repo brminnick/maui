@@ -1,10 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Microsoft.Maui;
 using Microsoft.Maui.Controls;
-using Microsoft.Maui.Graphics;
 
 namespace Maui.Controls.Sample.Pages
 {
@@ -13,6 +10,21 @@ namespace Maui.Controls.Sample.Pages
 		public MenuBarPage()
 		{
 			InitializeComponent();
+
+			CustomFileMenuFlyoutItem.KeyboardAccelerators.Add(
+				new KeyboardAccelerator()
+				{
+					Modifiers = KeyboardAcceleratorModifiers.Ctrl | KeyboardAcceleratorModifiers.Shift,
+					Key = "F"
+				}
+			);
+			CustomFileMenuFlyoutItem.KeyboardAccelerators.Add(
+				new KeyboardAccelerator()
+				{
+					Modifiers = KeyboardAcceleratorModifiers.Shift,
+					Key = "F"
+				}
+			);
 		}
 
 		void ItemClicked(object sender, EventArgs e)
@@ -23,9 +35,9 @@ namespace Maui.Controls.Sample.Pages
 			}
 		}
 
-		void ToggleMenuBarItem(object sender, EventArgs e)
+		void OnToggleMenuBarItem(object sender, EventArgs e)
 		{
-			MenuBarItem barItem =
+			var barItem =
 				MenuBarItems.FirstOrDefault(x => x.Text == "Added Menu");
 
 			if (barItem == null)
@@ -38,6 +50,13 @@ namespace Maui.Controls.Sample.Pages
 				barItem.Add(new MenuFlyoutItem()
 				{
 					Text = "Added Flyout Item",
+					Command = new Command(() => ItemClicked(barItem.First(), EventArgs.Empty))
+				});
+
+				barItem.Add(new MenuFlyoutItem()
+				{
+					Text = "Added Disabled Flyout Item",
+					IsEnabled = false,
 					Command = new Command(() => ItemClicked(barItem.First(), EventArgs.Empty))
 				});
 

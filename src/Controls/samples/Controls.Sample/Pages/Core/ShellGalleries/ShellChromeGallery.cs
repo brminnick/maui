@@ -6,12 +6,13 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Maui;
 using Microsoft.Maui.Controls;
+using Microsoft.Maui.Graphics;
 
 namespace Maui.Controls.Sample.Pages.ShellGalleries
 {
 	public partial class ShellChromeGallery
 	{
-		AppShell AppShell => Application.Current.MainPage as AppShell;
+		AppShell? AppShell => Application.Current!.MainPage as AppShell;
 
 		public ShellChromeGallery()
 		{
@@ -59,25 +60,25 @@ namespace Maui.Controls.Sample.Pages.ShellGalleries
 
 
 
-		void OnFlyoutHeaderBehaviorSelectedIndexChanged(object sender, EventArgs e)
+		void OnFlyoutHeaderBehaviorSelectedIndexChanged(object? sender, EventArgs e)
 		{
-			AppShell.FlyoutHeaderBehavior = (FlyoutHeaderBehavior)flyoutHeaderBehavior.SelectedIndex;
+			AppShell!.FlyoutHeaderBehavior = (FlyoutHeaderBehavior)flyoutHeaderBehavior.SelectedIndex;
 		}
 
-		void OnFlyoutBehaviorSelectedIndexChanged(object sender, EventArgs e)
+		void OnFlyoutBehaviorSelectedIndexChanged(object? sender, EventArgs e)
 		{
-			AppShell.FlyoutBehavior = (FlyoutBehavior)flyoutBehavior.SelectedIndex;
+			AppShell!.FlyoutBehavior = (FlyoutBehavior)flyoutBehavior.SelectedIndex;
 		}
 
 		protected override void OnAppearing()
 		{
-			AppShell.FlyoutBehavior = (FlyoutBehavior)flyoutBehavior.SelectedIndex;
-			AppShell.FlyoutHeaderBehavior = (FlyoutHeaderBehavior)flyoutHeaderBehavior.SelectedIndex;
+			AppShell!.FlyoutBehavior = (FlyoutBehavior)flyoutBehavior.SelectedIndex;
+			AppShell!.FlyoutHeaderBehavior = (FlyoutHeaderBehavior)flyoutHeaderBehavior.SelectedIndex;
 		}
 
 		void OnToggleFlyoutBackgroundColor(object sender, EventArgs e)
 		{
-			AppShell.RemoveBinding(Shell.FlyoutBackgroundProperty);
+			AppShell!.RemoveBinding(Shell.FlyoutBackgroundProperty);
 			if (AppShell.FlyoutBackground.IsEmpty ||
 				AppShell.FlyoutBackground == SolidColorBrush.Purple)
 			{
@@ -119,6 +120,24 @@ namespace Maui.Controls.Sample.Pages.ShellGalleries
 		void OnToggleTabBar(object sender, EventArgs e)
 		{
 			Shell.SetTabBarIsVisible(this, !Shell.GetTabBarIsVisible(this));
+		}
+
+		void OnToggleTabBarTitleColor(object sender, EventArgs e)
+		{
+			var random = new Random();
+			Shell.SetTabBarTitleColor(Shell.Current.CurrentItem, Color.FromRgb(random.Next(0, 255), random.Next(0, 255), random.Next(0, 255)));
+		}
+
+		void OnToggleTabBarUnselectedColor(object sender, EventArgs e)
+		{
+			var random = new Random();
+			Shell.SetTabBarUnselectedColor(Shell.Current.CurrentItem, Color.FromRgb(random.Next(0, 255), random.Next(0, 255), random.Next(0, 255)));
+		}
+
+		void OnToggleTabBarForegroundColor(object sender, EventArgs e)
+		{
+			var random = new Random();
+			Shell.SetTabBarForegroundColor(Shell.Current.CurrentItem, Color.FromRgb(random.Next(0, 255), random.Next(0, 255), random.Next(0, 255)));
 		}
 
 		protected void AddSearchHandler(string placeholder)

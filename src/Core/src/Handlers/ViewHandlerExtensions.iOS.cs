@@ -1,4 +1,5 @@
-﻿using CoreGraphics;
+﻿using System;
+using CoreGraphics;
 using CoreHaptics;
 using Microsoft.Maui.Graphics;
 using UIKit;
@@ -72,7 +73,37 @@ namespace Microsoft.Maui
 				return new Size(widthConstraint, heightConstraint);
 			}
 
-			var sizeThatFits = platformView.SizeThatFits(new CoreGraphics.CGSize((float)widthConstraint, (float)heightConstraint));
+			// The measurements ran in SizeThatFits percolate down to child views
+			// So if MaximumWidth/Height are not taken into account for constraints, the children may have wrong dimensions
+			widthConstraint = Math.Min(widthConstraint, virtualView.MaximumWidth);
+			heightConstraint = Math.Min(heightConstraint, virtualView.MaximumHeight);
+
+			CGSize sizeThatFits;
+
+			// Calling SizeThatFits on an ImageView always returns the image's dimensions, so we need to call the extension method
+			// This also affects ImageButtons
+			if (platformView is UIImageView imageView)
+			{
+				widthConstraint = IsExplicitSet(virtualView.Width) ? virtualView.Width : widthConstraint;
+				heightConstraint = IsExplicitSet(virtualView.Height) ? virtualView.Height : heightConstraint;
+
+				sizeThatFits = imageView.SizeThatFitsImage(new CGSize((float)widthConstraint, (float)heightConstraint));
+			}
+			else if (platformView is UIButton imageButton && imageButton.ImageView?.Image is not null && imageButton.CurrentTitle is null)
+			{
+				widthConstraint = IsExplicitSet(virtualView.Width) ? virtualView.Width : widthConstraint;
+				heightConstraint = IsExplicitSet(virtualView.Height) ? virtualView.Height : heightConstraint;
+
+				sizeThatFits = imageButton.ImageView.SizeThatFitsImage(new CGSize((float)widthConstraint, (float)heightConstraint));
+			}
+			else if (platformView is WrapperView wrapper)
+			{
+				sizeThatFits = wrapper.SizeThatFitsWrapper(new CGSize((float)widthConstraint, (float)heightConstraint), virtualView.Width, virtualView.Height);
+			}
+			else
+			{
+				sizeThatFits = platformView.SizeThatFits(new CGSize((float)widthConstraint, (float)heightConstraint));
+			}
 
 			var size = new Size(
 				sizeThatFits.Width == float.PositiveInfinity ? double.PositiveInfinity : sizeThatFits.Width,

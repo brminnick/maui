@@ -24,15 +24,10 @@ parameters:
     - name: Windows
       poolName: $(windowsNet6VmPool)
       vmImage: $(windowsNet6VmImage)
-      bootsAndroid: $(Android.Msi)
-      bootsiOS: $(iOS.Msi)
       artifact: templates-windows
     - name: macOS
       poolName: $(macOSXNet6VmPool)
       vmImage: $(macOSXNet6VmImage)
-      bootsAndroid: $(Android.Pkg)
-      bootsiOS: $(iOS.Pkg)
-      bootsMacCatalyst: $(MacCatalyst.Pkg)
       artifact: templates-macos
 
   - name: RunPlatforms
@@ -55,69 +50,75 @@ parameters:
     default: []
 
 jobs:
-- ${{ each BuildPlatform in parameters.BuildPlatforms }}:
-  - job: build_${{ BuildPlatform.name }}
-    workspace:
-      clean: all
-    displayName: ${{ BuildPlatform.name }}
-    timeoutInMinutes: 240
-    condition: ${{ parameters.condition}}
-    pool:
-      name: ${{ BuildPlatform.poolName }}
-      vmImage: ${{ BuildPlatform.vmImage }}
-      demands:
-        - macOS.Name -equals Ventura
-        - macOS.Architecture -equals x64
-    steps:
+- job: build_maui_templates
+  workspace:
+    clean: all
+  displayName: 'Build platform:'
+  timeoutInMinutes: 240
+  condition: ${{ parameters.condition}}
+  strategy:
+    matrix:
+      ${{ each BuildPlatform in parameters.BuildPlatforms }}:
+        ${{ BuildPlatform.name }}:
+          POOL_NAME: ${{ BuildPlatform.poolName }}
+          POOL_VIMAGE: ${{ BuildPlatform.vmImage }}
+          PLATFORM_NAME: ${{ lower(BuildPlatform.name) }}
 
-    - ${{ each step in parameters.prepareSteps }}:
-      - ${{ each pair in step }}:
-          ${{ pair.key }}: ${{ pair.value }}
+  pool:
+    name: $(POOL_NAME)
+    vmImage: $(POOL_VIMAGE)
+    demands:
+      - macOS.Name -equals Ventura
+      - macOS.Architecture -equals x64
+      - Agent.OSVersion -equals 13.5
+  steps:
 
-    - template: provision.yml
-      parameters:
-        platform: ${{ BuildPlatform.name }}
-        checkoutDirectory: ${{ parameters.checkoutDirectory }}
+  - ${{ each step in parameters.prepareSteps }}:
+    - ${{ each pair in step }}:
+        ${{ pair.key }}: ${{ pair.value }}
 
-    - task: DownloadBuildArtifacts@0
-      displayName: 'Download Packages'
-      inputs:
-        artifactName: ${{ parameters.artifactName }}
-        itemPattern: ${{ parameters.artifactItemPattern }}
-        downloadPath: $(System.DefaultWorkingDirectory)/artifacts
+  - template: provision.yml
+    parameters:
+      checkoutDirectory: ${{ parameters.checkoutDirectory }}
 
-    - pwsh: Move-Item -Path artifacts\${{ parameters.artifactName }}\*.nupkg -Destination artifacts -Force
-      displayName: Move the downloaded artifacts
+  - task: DownloadBuildArtifacts@0
+    displayName: 'Download Packages'
+    inputs:
+      artifactName: ${{ parameters.artifactName }}
+      itemPattern: ${{ parameters.artifactItemPattern }}
+      downloadPath: $(System.DefaultWorkingDirectory)/artifacts
 
-    - pwsh: ./build.ps1 --target=dotnet-local-workloads --verbosity=diagnostic
-      displayName: 'Install .NET (Local Workloads)'
-      retryCountOnTaskFailure: 3
-      workingDirectory: ${{ parameters.checkoutDirectory }}
-      env:
-        DOTNET_TOKEN: $(dotnetbuilds-internal-container-read-token)
-        PRIVATE_BUILD: $(PrivateBuild)
+  - pwsh: Move-Item -Path artifacts\${{ parameters.artifactName }}\*.nupkg -Destination artifacts -Force
+    displayName: Move the downloaded artifacts
 
-    - task: DotNetCoreCLI@2
-      inputs:
-        projects: ${{ parameters.checkoutDirectory }}/src/TestUtils/src/Microsoft.Maui.IntegrationTests/Microsoft.Maui.IntegrationTests.csproj
-      displayName: Build Microsoft.Maui.IntegrationTests
+  - pwsh: ./build.ps1 --target=dotnet-local-workloads --verbosity=diagnostic
+    displayName: 'Install .NET (Local Workloads)'
+    retryCountOnTaskFailure: 3
+    workingDirectory: ${{ parameters.checkoutDirectory }}
+    env:
+      DOTNET_TOKEN: $(dotnetbuilds-internal-container-read-token)
+      PRIVATE_BUILD: $(PrivateBuild)
 
-    - task: DotNetCoreCLI@2
-      inputs:
-        command: test
-        projects: ${{ parameters.checkoutDirectory }}/src/TestUtils/src/Microsoft.Maui.IntegrationTests/bin/Debug/net7.0/Microsoft.Maui.IntegrationTests.dll
-        arguments: --logger "console;verbosity=normal" --filter "FullyQualifiedName=Microsoft.Maui.IntegrationTests.TemplateTests"
-        publishTestResults: true
-        testRunTitle: ${{ BuildPlatform.name }} template build tests
-      displayName: ${{ BuildPlatform.name }} template build tests
-      continueOnError: true
+  - pwsh: ./build.ps1 --target=dotnet-integration-build --verbosity=diagnostic
+    displayName: Build Microsoft.Maui.IntegrationTests
 
-    - pwsh: |
-        Write-Host "Current job status is: $env:AGENT_JOBSTATUS"
-        if ($env:AGENT_JOBSTATUS -eq "SucceededWithIssues") {
-            Write-Host "##vso[task.complete result=Failed;]DONE"
-        }
-      displayName: Fail if any issues occurred
+  - pwsh: ./build.ps1 --target=dotnet-integration-test --filter="FullyQualifiedName=Microsoft.Maui.IntegrationTests.TemplateTests" --resultsfilename="integration-tests" --verbosity=diagnostic
+    displayName: Run $(PLATFORM_NAME) templates build tests
+
+  - task: PublishTestResults@2
+    displayName: Publish the $(PLATFORM_NAME) templates build tests
+    condition: always()
+    inputs:
+      testRunner: VSTest
+      testResultsFiles: '$(build.artifactstagingdirectory)/**/*.trx'
+      testRunTitle: $(PLATFORM_NAME) templates build tests
+
+  - pwsh: |
+      Write-Host "Current job status is: $env:AGENT_JOBSTATUS"
+      if ($env:AGENT_JOBSTATUS -eq "SucceededWithIssues") {
+          Write-Host "##vso[task.complete result=Failed;]DONE"
+      }
+    displayName: Fail if any issues occurred
 
 - ${{ each RunPlatform in parameters.RunPlatforms }}:
   - job: run_${{ RunPlatform.testName }}
@@ -135,7 +136,6 @@ jobs:
 
     - template: provision.yml
       parameters:
-        platform: macos
         skipXcode: ${{ eq(RunPlatform.testName, 'RunOnAndroid') }}
         checkoutDirectory: ${{ parameters.checkoutDirectory }}
 
@@ -157,23 +157,23 @@ jobs:
         DOTNET_TOKEN: $(dotnetbuilds-internal-container-read-token)
         PRIVATE_BUILD: $(PrivateBuild)
 
-    - script: dotnet tool update Microsoft.DotNet.XHarness.CLI --add-source https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-eng/nuget/v3/index.json --version "1.0.0-prerelease*" -g
+    - script: dotnet tool update Microsoft.DotNet.XHarness.CLI --add-source https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-eng/nuget/v3/index.json --version "8.0.0-prerelease*" -g
       displayName: install xharness
 
-    - task: DotNetCoreCLI@2
-      inputs:
-        projects: ${{ parameters.checkoutDirectory }}/src/TestUtils/src/Microsoft.Maui.IntegrationTests/Microsoft.Maui.IntegrationTests.csproj
+    - pwsh: ./build.ps1 --target=dotnet-integration-build --verbosity=diagnostic
       displayName: Build Microsoft.Maui.IntegrationTests
 
-    - task: DotNetCoreCLI@2
-      inputs:
-        command: test
-        projects: ${{ parameters.checkoutDirectory }}/src/TestUtils/src/Microsoft.Maui.IntegrationTests/bin/Debug/net7.0/Microsoft.Maui.IntegrationTests.dll
-        arguments: --logger "console;verbosity=normal" --filter "Name=${{ RunPlatform.testName }}"
-        publishTestResults: true
-        testRunTitle: ${{ RunPlatform.testName }} template run tests
-      displayName: ${{ RunPlatform.testName }} template run tests
+    - pwsh: ./build.ps1 --target=dotnet-integration-test --filter="Name=${{ RunPlatform.testName }}" --resultsfilename="integration-run-${{ RunPlatform.testName }}" --verbosity=diagnostic
+      displayName: Run $(PLATFORM_NAME) templates run tests
       continueOnError: true
+
+    - task: PublishTestResults@2
+      displayName: Publish the $(PLATFORM_NAME) templates run tests
+      condition: always()
+      inputs:
+        testRunner: VSTest
+        testResultsFiles: '$(build.artifactstagingdirectory)/**/*.trx'
+        testRunTitle: $(PLATFORM_NAME) templates run tests
 
     - pwsh: |
         Write-Host "Current job status is: $env:AGENT_JOBSTATUS"

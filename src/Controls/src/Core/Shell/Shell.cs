@@ -21,7 +21,7 @@ namespace Microsoft.Maui.Controls
 {
 	/// <include file="../../../docs/Microsoft.Maui.Controls/Shell.xml" path="Type[@FullName='Microsoft.Maui.Controls.Shell']/Docs/*" />
 	[ContentProperty(nameof(Items))]
-	public partial class Shell : Page, IShellController, IPropertyPropagationController, IPageContainer<Page>
+	public partial class Shell : Page, IShellController, IPropertyPropagationController, IPageContainer<Page>, IFlyoutView
 	{
 		/// <include file="../../../docs/Microsoft.Maui.Controls/Shell.xml" path="//Member[@MemberName='CurrentPage']/Docs/*" />
 		public Page CurrentPage => GetVisiblePage() as Page;
@@ -49,7 +49,18 @@ namespace Microsoft.Maui.Controls
 
 		/// <summary>Bindable property for attached property <c>NavBarIsVisible</c>.</summary>
 		public static readonly BindableProperty NavBarIsVisibleProperty =
-			BindableProperty.CreateAttached("NavBarIsVisible", typeof(bool), typeof(Shell), true);
+			BindableProperty.CreateAttached("NavBarIsVisible", typeof(bool), typeof(Shell), true, propertyChanged: OnNavBarIsVisibleChanged);
+
+		private static void OnNavBarIsVisibleChanged(BindableObject bindable, object oldValue, object newValue)
+		{
+			// Nav bar visibility change is only interesting from the Shell down to the current Page.
+			// Make sure the ShellToolbar knows about any possible change.
+			Shell shell = bindable as Shell
+				?? (bindable as BaseShellItem)?.FindParentOfType<Shell>()
+				?? (bindable as Page)?.FindParentOfType<Shell>();
+
+			shell?.OnPropertyChanged(NavBarIsVisibleProperty.PropertyName);
+		}
 
 		/// <summary>Bindable property for attached property <c>NavBarHasShadow</c>.</summary>
 		public static readonly BindableProperty NavBarHasShadowProperty =
@@ -691,38 +702,27 @@ namespace Microsoft.Maui.Controls
 			return _navigationManager.GoToAsync(state, animate, false, parameters: new ShellRouteParameters(parameters));
 		}
 
-		public void AddLogicalChild(Element element)
+		/// <summary>
+		/// This method navigates to a <see cref="ShellNavigationState" /> and returns a <see cref="Task" /> that will complete once the navigation animation.
+		/// </summary>
+		/// <param name="state">Defines the path for Shell to navigate to.</param>
+		/// <param name="shellNavigationQueryParameters">Parameters to use for this specific navigation operation.</param>
+		/// <returns></returns>
+		public Task GoToAsync(ShellNavigationState state, ShellNavigationQueryParameters shellNavigationQueryParameters)
 		{
-			if (element == null)
-			{
-				return;
-			}
-
-			if (_logicalChildren.Contains(element))
-				return;
-
-			_logicalChildren.Add(element);
-			element.Parent = this;
-			OnChildAdded(element);
-			VisualDiagnostics.OnChildAdded(this, element);
+			return _navigationManager.GoToAsync(state, null, false, parameters: new ShellRouteParameters(shellNavigationQueryParameters));
 		}
 
-		public void RemoveLogicalChild(Element element)
+		/// <summary>
+		/// This method navigates to a <see cref="ShellNavigationState" /> and returns a <see cref="Task" />.
+		/// </summary>
+		/// <param name="state">Defines the path for Shell to navigate to.</param>
+		/// <param name="animate">Indicates if your transition is animated</param>
+		/// <param name="shellNavigationQueryParameters">Parameters to use for this specific navigation operation.</param>
+		/// <returns></returns>
+		public Task GoToAsync(ShellNavigationState state, bool animate, ShellNavigationQueryParameters shellNavigationQueryParameters)
 		{
-			if (element == null)
-			{
-				return;
-			}
-
-			element.Parent = null;
-
-			var oldLogicalIndex = _logicalChildren.IndexOf(element);
-			if (oldLogicalIndex == -1)
-				return;
-
-			_logicalChildren.RemoveAt(oldLogicalIndex);
-			OnChildRemoved(element, oldLogicalIndex);
-			VisualDiagnostics.OnChildRemoved(this, element, oldLogicalIndex);
+			return _navigationManager.GoToAsync(state, animate, false, parameters: new ShellRouteParameters(shellNavigationQueryParameters));
 		}
 
 		/// <summary>Bindable property for <see cref="CurrentItem"/>.</summary>
@@ -795,12 +795,6 @@ namespace Microsoft.Maui.Controls
 		ShellFlyoutItemsManager _flyoutManager;
 		Page _previousPage;
 
-		ObservableCollection<Element> _logicalChildren
-			= new ObservableCollection<Element>();
-
-		private protected override IList<Element> LogicalChildrenInternalBackingStore
-			=> _logicalChildren;
-
 		/// <include file="../../../docs/Microsoft.Maui.Controls/Shell.xml" path="//Member[@MemberName='.ctor']/Docs/*" />
 		public Shell()
 		{
@@ -814,7 +808,6 @@ namespace Microsoft.Maui.Controls
 			Navigation = new NavigationImpl(this);
 			Route = Routing.GenerateImplicitRoute("shell");
 			Initialize();
-			InternalChildren.CollectionChanged += OnInternalChildrenCollectionChanged;
 
 			if (Application.Current != null)
 			{
@@ -1313,27 +1306,8 @@ namespace Microsoft.Maui.Controls
 			shell.OnFlyoutFooterTemplateChanged((DataTemplate)oldValue, (DataTemplate)newValue);
 		}
 
-		static void OnTitleViewChanged(BindableObject bindable, object oldValue, object newValue)
-		{
-			if (!(bindable is Element owner))
-				return;
-
-			var oldView = (View)oldValue;
-			var newView = (View)newValue;
-			var shell = bindable as Shell;
-
-			if (oldView != null)
-			{
-				shell?.RemoveLogicalChild(oldView);
-				oldView.Parent = null;
-			}
-
-			if (newView != null)
-			{
-				newView.Parent = owner;
-				shell?.AddLogicalChild(newView);
-			}
-		}
+		static void OnTitleViewChanged(BindableObject bindable, object oldValue, object newValue) =>
+			bindable.AddRemoveLogicalChildren(oldValue, newValue);
 
 		internal FlyoutBehavior GetEffectiveFlyoutBehavior()
 		{
@@ -1445,18 +1419,6 @@ namespace Microsoft.Maui.Controls
 			return null;
 		}
 
-
-		void OnInternalChildrenCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
-		{
-			if (e.NewItems != null)
-				foreach (Element element in e.NewItems)
-					AddLogicalChild(element);
-
-			if (e.OldItems != null)
-				foreach (Element element in e.OldItems)
-					RemoveLogicalChild(element);
-		}
-
 		void NotifyFlyoutBehaviorObservers()
 		{
 			if (CurrentItem == null || GetVisiblePage() == null)
@@ -1475,7 +1437,7 @@ namespace Microsoft.Maui.Controls
 				FlyoutHeaderTemplate,
 				ref _flyoutHeaderView,
 				newVal,
-				RemoveLogicalChild,
+				(element) => RemoveLogicalChild(element),
 				AddLogicalChild);
 		}
 
@@ -1485,7 +1447,7 @@ namespace Microsoft.Maui.Controls
 				newValue,
 				ref _flyoutHeaderView,
 				FlyoutHeader,
-				RemoveLogicalChild,
+				(element) => RemoveLogicalChild(element),
 				AddLogicalChild,
 				this);
 		}
@@ -1496,7 +1458,7 @@ namespace Microsoft.Maui.Controls
 				FlyoutFooterTemplate,
 				ref _flyoutFooterView,
 				newVal,
-				RemoveLogicalChild,
+				(element) => RemoveLogicalChild(element),
 				AddLogicalChild);
 		}
 
@@ -1506,7 +1468,7 @@ namespace Microsoft.Maui.Controls
 				newValue,
 				ref _flyoutFooterView,
 				FlyoutFooter,
-				RemoveLogicalChild,
+				(element) => RemoveLogicalChild(element),
 				AddLogicalChild,
 				this);
 		}
@@ -1566,19 +1528,35 @@ namespace Microsoft.Maui.Controls
 
 		void IPropertyPropagationController.PropagatePropertyChanged(string propertyName)
 		{
-			PropertyPropagationExtensions.PropagatePropertyChanged(propertyName, this, ((IElementController)this).LogicalChildren);
-			if (FlyoutHeaderView != null)
-				PropertyPropagationExtensions.PropagatePropertyChanged(propertyName, this, new[] { FlyoutHeaderView });
-			if (FlyoutFooterView != null)
-				PropertyPropagationExtensions.PropagatePropertyChanged(propertyName, this, new[] { FlyoutFooterView });
-			if (FlyoutContentView != null)
-				PropertyPropagationExtensions.PropagatePropertyChanged(propertyName, this, new[] { FlyoutContentView });
+			PropertyPropagationExtensions.PropagatePropertyChanged(propertyName, this, ((IVisualTreeElement)this).GetVisualChildren());
 		}
 
 		protected override void LayoutChildren(double x, double y, double width, double height)
 		{
 			// Page by default tries to layout all logical children
 			// we don't want this behavior with shell
+		}
+
+		IView IFlyoutView.Flyout => this.FlyoutContentView;
+		IView IFlyoutView.Detail => null;
+
+		bool IFlyoutView.IsPresented { get => FlyoutIsPresented; set => FlyoutIsPresented = value; }
+
+		bool IFlyoutView.IsGestureEnabled => false;
+
+		FlyoutBehavior IFlyoutView.FlyoutBehavior
+		{
+			get
+			{
+				return GetEffectiveFlyoutBehavior();
+			}
+		}
+
+		protected override void OnPropertyChanged([CallerMemberName] string propertyName = null)
+		{
+			base.OnPropertyChanged(propertyName);
+			if (propertyName == Shell.FlyoutIsPresentedProperty.PropertyName)
+				Handler?.UpdateValue(nameof(IFlyoutView.IsPresented));
 		}
 
 		#region Shell Flyout Content
@@ -1618,7 +1596,7 @@ namespace Microsoft.Maui.Controls
 				FlyoutContentTemplate,
 				ref _flyoutContentView,
 				newVal,
-				RemoveLogicalChild,
+				(element) => RemoveLogicalChild(element),
 				AddLogicalChild);
 		}
 
@@ -1628,7 +1606,7 @@ namespace Microsoft.Maui.Controls
 				newValue,
 				ref _flyoutContentView,
 				FlyoutContent,
-				RemoveLogicalChild,
+				(element) => RemoveLogicalChild(element),
 				AddLogicalChild,
 				this);
 		}
@@ -1675,21 +1653,11 @@ namespace Microsoft.Maui.Controls
 					return page;
 				}
 
-				if (ModalStack.Count > 0)
-					ModalStack[ModalStack.Count - 1].SendDisappearing();
-
-				if (!_shell.CurrentItem.CurrentItem.IsPoppingModalStack)
-				{
-					if (ModalStack.Count > 1)
-						ModalStack[ModalStack.Count - 2].SendAppearing();
-				}
-
 				var modalPopped = await base.OnPopModal(animated);
 
 				if (ModalStack.Count == 0 && !_shell.CurrentItem.CurrentItem.IsPoppingModalStack)
 					_shell.CurrentItem.SendAppearing();
 
-				modalPopped.Parent = null;
 				return modalPopped;
 			}
 
@@ -1711,18 +1679,6 @@ namespace Microsoft.Maui.Controls
 
 				if (ModalStack.Count == 0)
 					_shell.CurrentItem.SendDisappearing();
-
-				modal.Parent = (Element)_shell.FindParentOfType<IWindow>();
-
-				if (!_shell.CurrentItem.CurrentItem.IsPushingModalStack)
-				{
-					if (ModalStack.Count > 0)
-					{
-						ModalStack[ModalStack.Count - 1].SendDisappearing();
-					}
-
-					modal.SendAppearing();
-				}
 
 				await base.OnPushModal(modal, animated);
 

@@ -1,16 +1,16 @@
 using System;
 using System.Threading.Tasks;
-using Microsoft.Maui.Controls;
-using Microsoft.Maui.Controls.Hosting;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Maui.DeviceTests;
 using Microsoft.Maui.DeviceTests.Stubs;
+using Microsoft.Maui.Dispatching;
 using Microsoft.Maui.Graphics;
-using Microsoft.Maui.Handlers;
 using Microsoft.Maui.Hosting;
+using Microsoft.Maui.TestUtils.DeviceTests.Runners;
 
 namespace Microsoft.Maui.MauiBlazorWebView.DeviceTests
 {
-	public partial class HandlerTestBase : TestBase, IDisposable
+	public partial class HandlerTestBase : TestBase, IAsyncDisposable
 	{
 		private MauiApp _mauiApp;
 		private IMauiContext _mauiContext;
@@ -27,6 +27,10 @@ namespace Microsoft.Maui.MauiBlazorWebView.DeviceTests
 			var appBuilder = MauiApp
 				.CreateBuilder();
 
+			appBuilder.Services.AddSingleton<IDispatcherProvider>(svc => TestDispatcher.Provider);
+			appBuilder.Services.AddScoped<IDispatcher>(svc => TestDispatcher.Current);
+			appBuilder.Services.AddSingleton<IApplication>((_) => new CoreApplicationStub());
+
 			additionalCreationActions?.Invoke(appBuilder);
 
 			_mauiApp = appBuilder.Build();
@@ -34,9 +38,12 @@ namespace Microsoft.Maui.MauiBlazorWebView.DeviceTests
 			_mauiContext = new ContextStub(_mauiApp.Services);
 		}
 
-		public void Dispose()
+		public async ValueTask DisposeAsync()
 		{
-			((IDisposable)_mauiApp)?.Dispose();
+			if (_mauiApp != null)
+			{
+				await ((IAsyncDisposable)_mauiApp).DisposeAsync();
+			}
 
 			_mauiApp = null;
 			_mauiContext = null;

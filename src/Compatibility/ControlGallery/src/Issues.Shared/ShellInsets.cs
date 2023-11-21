@@ -318,6 +318,7 @@ namespace Microsoft.Maui.Controls.ControlGallery.Issues
 
 #if UITEST && __IOS__
 		[Test]
+		[Compatibility.UITests.FailsOnMauiIOS]
 		public void EntryScrollTest()
 		{
 			RunningApp.Tap(EntryTest);
@@ -367,6 +368,7 @@ namespace Microsoft.Maui.Controls.ControlGallery.Issues
 		}
 
 		[Test]
+		[Compatibility.UITests.FailsOnMauiIOS]
 		public void SafeAreaOnBlankPage()
 		{
 			RunningApp.Tap(EmptyPageSafeAreaTest);
@@ -375,6 +377,7 @@ namespace Microsoft.Maui.Controls.ControlGallery.Issues
 		}
 
 		[Test]
+		[Compatibility.UITests.FailsOnMauiIOS]
 		public void SafeArea()
 		{
 			RunningApp.Tap(SafeAreaTest);

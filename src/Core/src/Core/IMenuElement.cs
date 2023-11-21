@@ -1,4 +1,5 @@
-﻿using Microsoft.Maui.Graphics;
+﻿using System;
+using System.Collections.Generic;
 
 namespace Microsoft.Maui
 {

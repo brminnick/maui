@@ -41,6 +41,7 @@ namespace Microsoft.Maui.Handlers
 		// TODO: NET8 issoto - Change the return type to MauiAppCompatEditText
 		protected override void ConnectHandler(AppCompatEditText platformView)
 		{
+			platformView.ViewAttachedToWindow += OnViewAttachedToWindow;
 			platformView.TextChanged += OnTextChanged;
 			platformView.FocusChange += OnFocusedChange;
 			platformView.Touch += OnTouch;
@@ -52,6 +53,7 @@ namespace Microsoft.Maui.Handlers
 		{
 			_clearButtonDrawable = null;
 
+			platformView.ViewAttachedToWindow -= OnViewAttachedToWindow;
 			platformView.TextChanged -= OnTextChanged;
 			platformView.FocusChange -= OnFocusedChange;
 			platformView.Touch -= OnTouch;
@@ -73,8 +75,12 @@ namespace Microsoft.Maui.Handlers
 		public static void MapTextColor(IEntryHandler handler, IEntry entry) =>
 			handler.PlatformView?.UpdateTextColor(entry);
 
-		public static void MapIsPassword(IEntryHandler handler, IEntry entry) =>
+		public static void MapIsPassword(IEntryHandler handler, IEntry entry)
+		{
+			handler.UpdateValue(nameof(IEntry.Text));
+
 			handler.PlatformView?.UpdateIsPassword(entry);
+		}
 
 		public static void MapHorizontalTextAlignment(IEntryHandler handler, IEntry entry) =>
 			handler.PlatformView?.UpdateHorizontalTextAlignment(entry);
@@ -84,6 +90,9 @@ namespace Microsoft.Maui.Handlers
 
 		public static void MapIsTextPredictionEnabled(IEntryHandler handler, IEntry entry) =>
 			handler.PlatformView?.UpdateIsTextPredictionEnabled(entry);
+
+		public static void MapIsSpellCheckEnabled(IEntryHandler handler, IEntry entry) =>
+			handler.PlatformView?.UpdateIsSpellCheckEnabled(entry);
 
 		public static void MapMaxLength(IEntryHandler handler, IEntry entry) =>
 			handler.PlatformView?.UpdateMaxLength(entry);
@@ -100,11 +109,19 @@ namespace Microsoft.Maui.Handlers
 		public static void MapFont(IEntryHandler handler, IEntry entry) =>
 			handler.PlatformView?.UpdateFont(entry, handler.GetRequiredService<IFontManager>());
 
-		public static void MapIsReadOnly(IEntryHandler handler, IEntry entry) =>
-			handler.PlatformView?.UpdateIsReadOnly(entry);
+		public static void MapIsReadOnly(IEntryHandler handler, IEntry entry)
+		{
+			handler.UpdateValue(nameof(IEntry.Text));
 
-		public static void MapKeyboard(IEntryHandler handler, IEntry entry) =>
+			handler.PlatformView?.UpdateIsReadOnly(entry);
+		}
+
+		public static void MapKeyboard(IEntryHandler handler, IEntry entry)
+		{
+			handler.UpdateValue(nameof(IEntry.Text));
+
 			handler.PlatformView?.UpdateKeyboard(entry);
+		}
 
 		public static void MapReturnType(IEntryHandler handler, IEntry entry) =>
 			handler.PlatformView?.UpdateReturnType(entry);
@@ -130,6 +147,14 @@ namespace Microsoft.Maui.Handlers
 				handler.PlatformView.Focus(request);
 		}
 
+		void OnViewAttachedToWindow(object? sender, ViewAttachedToWindowEventArgs e)
+		{
+			if (PlatformView is null || VirtualView is null)
+				return;
+
+			PlatformView.UpdateReturnType(VirtualView);
+		}
+
 		void OnTextChanged(object? sender, TextChangedEventArgs e)
 		{
 			if (VirtualView == null)
@@ -139,6 +164,7 @@ namespace Microsoft.Maui.Handlers
 
 			// Let the mapping know that the update is coming from changes to the platform control
 			DataFlowDirection = DataFlowDirection.FromPlatform;
+
 			VirtualView.UpdateText(e);
 
 			// Reset to the default direction

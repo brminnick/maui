@@ -14,7 +14,10 @@ namespace Microsoft.Maui.Handlers
 				throw new InvalidOperationException($"{nameof(VirtualView)} must be set to create a LayoutViewGroup");
 			}
 
-			return new();
+			return new()
+			{
+				CrossPlatformLayout = VirtualView
+			};
 		}
 
 		public override void SetVirtualView(IView view)
@@ -26,6 +29,7 @@ namespace Microsoft.Maui.Handlers
 			_ = MauiContext ?? throw new InvalidOperationException($"{nameof(MauiContext)} should have been set by base class.");
 
 			PlatformView.View = view;
+			PlatformView.CrossPlatformLayout = VirtualView;
 
 			// Remove any previous children 
 			PlatformView.ClearSubviews();
@@ -134,6 +138,11 @@ namespace Microsoft.Maui.Handlers
 				PlatformView.Subviews.RemoveAt(currentIndex);
 				PlatformView.InsertSubview(nativeChildView, targetIndex);
 			}
+		}
+
+		public static partial void MapBackground(ILayoutHandler handler, ILayout layout)
+		{
+			handler.PlatformView?.UpdateBackground(layout);
 		}
 	}
 }

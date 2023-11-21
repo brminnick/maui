@@ -42,18 +42,23 @@ namespace Maui.Controls.Sample.Pages
 			bbb.IsEnabled = false;
 
 			ContextMenuWebView.HandlerChanged += OnWebViewHandlerChanged;
+
+			Increment10MenuFlyoutItem.KeyboardAccelerators.Add(new KeyboardAccelerator() { Modifiers = KeyboardAcceleratorModifiers.Alt | KeyboardAcceleratorModifiers.Ctrl, Key = "A" });
+			Increment20MenuFlyoutItem.KeyboardAccelerators.Add(new KeyboardAccelerator() { Modifiers = KeyboardAcceleratorModifiers.Shift, Key = "B" });
+			Increment1000MenuFlyoutItem.KeyboardAccelerators.Add(new KeyboardAccelerator() { Modifiers = KeyboardAcceleratorModifiers.Ctrl, Key = "t" });
+			Increment1000000MenuFlyoutItem.KeyboardAccelerators.Add(new KeyboardAccelerator() { Modifiers = KeyboardAcceleratorModifiers.Alt, Key = "b" });
+			bbb.KeyboardAccelerators.Add(new KeyboardAccelerator() { Key = "C" });
 		}
 
-
-		void OnWebViewHandlerChanged(object sender, EventArgs e)
+		void OnWebViewHandlerChanged(object? sender, EventArgs e)
 		{
 			if (ContextMenuWebView.Handler != null)
 			{
 #if WINDOWS
-				var webView2 = (Microsoft.UI.Xaml.Controls.WebView2)ContextMenuWebView.Handler.PlatformView;
+				var webView2 = (Microsoft.UI.Xaml.Controls.WebView2)ContextMenuWebView.Handler.PlatformView!;
 				webView2.CoreWebView2Initialized += OnWebView2CoreWebView2Initialized;
 #elif MACCATALYST
-				var wkWebView = (WebKit.WKWebView)ContextMenuWebView.Handler.PlatformView;
+				var wkWebView = (WebKit.WKWebView)ContextMenuWebView.Handler.PlatformView!;
 				// TODO: Need to figure out how to disable default WKWebView context menu so that
 				// the custom context flyout is shown instead. (It does sometimes show up for a second
 				// but then it goes back to the default web context menu.)
@@ -143,25 +148,55 @@ namespace Maui.Controls.Sample.Pages
 
 		void OnAddMenuClicked(object sender, EventArgs e)
 		{
-			var contextFlyout = ((MenuFlyoutItem)sender).Parent as MenuFlyout;
+			var contextFlyout = (((MenuFlyoutItem)sender).Parent as MenuFlyout)!;
 			AddNewMenu(contextFlyout, "top-level");
 		}
 
 		void OnAddSubMenuClicked(object sender, EventArgs e)
 		{
 			var subMenu = (MenuFlyoutSubItem)((MenuFlyoutItem)sender).Parent;
-			AddNewMenu(subMenu, "sub-menu");
+			AddNewMenu(subMenu, "sub-menu", subMenu.Count - 2, subMenu.Count % 2 == 0);
+			CheckSubMenu();
+		}
+		void OnRemoveSubMenuClicked(object sender, EventArgs e)
+		{
+			var subMenu = (MenuFlyoutSubItem)((MenuFlyoutItem)sender).Parent;
+			subMenu.RemoveAt(subMenu.Count - 3);
+			CheckSubMenu();
 		}
 
-		private void AddNewMenu(IList<IMenuElement> parent, string newItemType)
+		void CheckSubMenu()
+		{
+			removeSubMenuItems.IsEnabled = subMenu.Count > 4;
+		}
+
+		private void AddNewMenu(IList<IMenuElement> parent, string newItemType, int index = -1, bool subMenuItem = false)
 		{
 			var newItemLocalValue = newMenuItemCount;
-			var newMenuItem = new MenuFlyoutItem() { Text = $"New {newItemType} menu item #{newItemLocalValue}" };
-			newMenuItem.Clicked += (s, e) => DisplayAlert(
+			IMenuElement newMenuItem;
+			MenuFlyoutItem mfi = new MenuFlyoutItem() { Text = $"New {newItemType} menu item #{newItemLocalValue}" };
+
+			mfi.Clicked += (s, e) => DisplayAlert(
 				title: "New Menu Item Click",
 				message: $"The new menu item {newItemLocalValue} was clicked",
 				cancel: "OK");
-			parent.Add(newMenuItem);
+
+			if (!subMenuItem)
+			{
+				newMenuItem = mfi;
+			}
+			else
+			{
+				var subItem = new MenuFlyoutSubItem() { Text = $"New {newItemType} menu item #{newItemLocalValue}" };
+				newMenuItem = subItem;
+				subItem.Add(mfi);
+			}
+
+			if (index == -1)
+				parent.Add(newMenuItem);
+			else
+				parent.Insert(index, newMenuItem);
+
 			newMenuItemCount++;
 		}
 	}

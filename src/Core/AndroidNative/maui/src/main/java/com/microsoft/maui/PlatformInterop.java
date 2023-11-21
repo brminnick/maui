@@ -1,33 +1,43 @@
 package com.microsoft.maui;
 
+import android.app.Activity;
 import android.content.Context;
 import android.content.res.ColorStateList;
+import android.graphics.BlendMode;
+import android.graphics.BlendModeColorFilter;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.PathEffect;
+import android.graphics.PorterDuff;
+import android.graphics.Rect;
 import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.PaintDrawable;
 import android.net.Uri;
 import android.os.Build;
+import android.text.Editable;
+import android.text.InputFilter;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewParent;
+import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 
 import androidx.annotation.ColorInt;
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 import androidx.appcompat.widget.SearchView;
 import androidx.appcompat.widget.TintTypedArray;
 import androidx.coordinatorlayout.widget.CoordinatorLayout;
 import androidx.viewpager2.adapter.FragmentStateAdapter;
 import androidx.viewpager2.widget.ViewPager2;
+import androidx.window.layout.WindowMetricsCalculator;
 
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.RequestBuilder;
@@ -47,6 +57,9 @@ import com.microsoft.maui.glide.font.FontModel;
 
 import java.io.InputStream;
 import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 public class PlatformInterop {
     public static void requestLayoutIfNeeded(View view) {
@@ -216,6 +229,42 @@ public class PlatformInterop {
             .attach();
 
         return pager;
+    }
+
+    /**
+     * Call setColorFilter on a Drawable, passing in (int)Microsoft.Maui.FilterMode
+     * Calls the appropriate methods for Android API 29/Q+
+     * @param drawable android.graphics.Drawable
+     * @param color android.graphics.Color
+     * @param mode (int)Microsoft.Maui.FilterMode
+     */
+    public static void setColorFilter(@NonNull Drawable drawable, int color, int mode) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            drawable.setColorFilter(new BlendModeColorFilter(color, getBlendMode(mode)));
+        } else {
+            drawable.setColorFilter(color, getPorterMode(mode));
+        }
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.Q)
+    static BlendMode getBlendMode(int mode) {
+        // NOTE: keep in sync with src/Core/src/Primitives/FilterMode.cs
+        switch (mode) {
+            case 0: return BlendMode.SRC_IN;
+            case 1: return BlendMode.MULTIPLY;
+            case 2: return BlendMode.SRC_ATOP;
+            default: throw new RuntimeException("Invalid Mode");
+        }
+    }
+
+    static PorterDuff.Mode getPorterMode(int mode) {
+        // NOTE: keep in sync with src/Core/src/Primitives/FilterMode.cs
+        switch (mode) {
+            case 0: return PorterDuff.Mode.SRC_IN;
+            case 1: return PorterDuff.Mode.MULTIPLY;
+            case 2: return PorterDuff.Mode.SRC_ATOP;
+            default: throw new RuntimeException("Invalid Mode");
+        }
     }
 
     private static void prepare(RequestBuilder<Drawable> builder, Target<Drawable> target, Boolean cachingEnabled, ImageLoaderCallback callback) {
@@ -453,6 +502,68 @@ public class PlatformInterop {
             // Implementation from AOSP
             return (value.type >= TypedValue.TYPE_FIRST_COLOR_INT && value.type <= TypedValue.TYPE_LAST_COLOR_INT);
         }
+    }
+
+    /**
+     * Sets the maxLength of an EditText
+     * @param editText
+     * @param maxLength
+     */
+    public static void updateMaxLength(@NonNull EditText editText, int maxLength)
+    {
+        setLengthFilter(editText, maxLength);
+
+        if (maxLength < 0)
+            return;
+
+        Editable currentText = editText.getText();
+        if (currentText.length() > maxLength) {
+            editText.setText(currentText.subSequence(0, maxLength));
+        }
+    }
+
+    /**
+     * Updates the InputFilter[] of an EditText. Used for Entry and SearchBar.
+     * @param editText
+     * @param maxLength
+     */
+    public static void setLengthFilter(@NonNull EditText editText, int maxLength)
+    {
+        if (maxLength == -1)
+            maxLength = Integer.MAX_VALUE;
+
+        List<InputFilter> currentFilters = new ArrayList<>(Arrays.asList(editText.getFilters()));
+        boolean changed = false;
+        for (int i = 0; i < currentFilters.size(); i++) {
+            InputFilter filter = currentFilters.get(i);
+            if (filter instanceof InputFilter.LengthFilter) {
+                currentFilters.remove(i);
+                changed = true;
+                break;
+            }
+        }
+
+        if (maxLength >= 0) {
+            currentFilters.add(new InputFilter.LengthFilter(maxLength));
+            changed = true;
+        }
+        if (changed) {
+            InputFilter[] newFilter = new InputFilter[currentFilters.size()];
+            editText.setFilters(currentFilters.toArray(newFilter));
+        }
+    }
+
+    /**
+     * Computes the current WindowMetrics' bounds
+     * @param activity
+     * @return Rect value of the bounds
+     */
+    @NonNull
+    public static Rect getCurrentWindowMetrics(Activity activity) {
+        return WindowMetricsCalculator.Companion
+            .getOrCreate()
+            .computeCurrentWindowMetrics(activity)
+            .getBounds();
     }
 
     private static class ColorStates

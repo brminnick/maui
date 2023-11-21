@@ -15,8 +15,7 @@ namespace Microsoft.Maui.Handlers
 
 			var viewGroup = new LayoutViewGroup(Context!)
 			{
-				CrossPlatformMeasure = VirtualView.CrossPlatformMeasure,
-				CrossPlatformArrange = VirtualView.CrossPlatformArrange
+				CrossPlatformLayout = VirtualView
 			};
 
 			// .NET MAUI layouts should not impose clipping on their children	
@@ -33,8 +32,7 @@ namespace Microsoft.Maui.Handlers
 			_ = VirtualView ?? throw new InvalidOperationException($"{nameof(VirtualView)} should have been set by base class.");
 			_ = MauiContext ?? throw new InvalidOperationException($"{nameof(MauiContext)} should have been set by base class.");
 
-			PlatformView.CrossPlatformMeasure = VirtualView.CrossPlatformMeasure;
-			PlatformView.CrossPlatformArrange = VirtualView.CrossPlatformArrange;
+			PlatformView.CrossPlatformLayout = VirtualView;
 
 			PlatformView.RemoveAllViews();
 
@@ -137,7 +135,7 @@ namespace Microsoft.Maui.Handlers
 			}
 		}
 
-		static int IndexOf(ViewGroup viewGroup, AView view)
+		static int IndexOf(LayoutViewGroup viewGroup, AView view)
 		{
 			for (int n = 0; n < viewGroup.ChildCount; n++)
 			{
@@ -150,7 +148,12 @@ namespace Microsoft.Maui.Handlers
 			return -1;
 		}
 
-		static void MapInputTransparent(ILayoutHandler handler, ILayout layout)
+		public static partial void MapBackground(ILayoutHandler handler, ILayout layout)
+		{
+			handler.PlatformView?.UpdateBackground(layout);
+		}
+
+		public static partial void MapInputTransparent(ILayoutHandler handler, ILayout layout)
 		{
 			if (handler.PlatformView is LayoutViewGroup layoutViewGroup)
 			{

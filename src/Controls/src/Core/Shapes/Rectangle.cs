@@ -1,10 +1,12 @@
 #nullable disable
+using System;
+using System.Runtime.CompilerServices;
 using Microsoft.Maui.Graphics;
 
 namespace Microsoft.Maui.Controls.Shapes
 {
 	/// <include file="../../../docs/Microsoft.Maui.Controls.Shapes/Rectangle.xml" path="Type[@FullName='Microsoft.Maui.Controls.Shapes.Rectangle']/Docs/*" />
-	public sealed partial class Rectangle : Shape
+	public sealed partial class Rectangle : Shape, IShape
 	{
 		/// <include file="../../../docs/Microsoft.Maui.Controls.Shapes/Rectangle.xml" path="//Member[@MemberName='.ctor']/Docs/*" />
 		public Rectangle() : base()
@@ -32,6 +34,44 @@ namespace Microsoft.Maui.Controls.Shapes
 		{
 			set { SetValue(RadiusYProperty, value); }
 			get { return (double)GetValue(RadiusYProperty); }
+		}
+
+		// TODO this should move to a remapped mapper
+		protected override void OnPropertyChanged([CallerMemberName] string propertyName = null)
+		{
+			base.OnPropertyChanged(propertyName);
+
+			if (propertyName == RadiusXProperty.PropertyName ||
+				propertyName == RadiusYProperty.PropertyName)
+				Handler?.UpdateValue(nameof(IShapeView.Shape));
+		}
+
+		public override PathF GetPath()
+		{
+			var width = WidthForPathComputation;
+			var height = HeightForPathComputation;
+
+			var path = new PathF();
+
+			float x = (float)StrokeThickness / 2;
+			float y = (float)StrokeThickness / 2;
+			float w = (float)(width - StrokeThickness);
+			float h = (float)(height - StrokeThickness);
+			float cornerRadius = (float)Math.Max(RadiusX, RadiusY);
+
+			// TODO: Create specific Path taking into account RadiusX and RadiusY
+			if (cornerRadius == 0)
+			{
+				// AppendRoundedRectangle will slash the corners even for cornerRadius = 0
+				// so in that case we use AppendRectangle instead
+				path.AppendRectangle(x, y, w, h);
+			}
+			else
+			{
+				path.AppendRoundedRectangle(x, y, w, h, cornerRadius);
+			}
+
+			return path;
 		}
 	}
 }

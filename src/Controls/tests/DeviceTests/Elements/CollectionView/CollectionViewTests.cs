@@ -47,6 +47,8 @@ namespace Microsoft.Maui.DeviceTests
 			WeakReference weakReference = null;
 			var collectionView = new CollectionView
 			{
+				Header = new Label { Text = "Header" },
+				Footer = new Label { Text = "Footer" },
 				ItemTemplate = new DataTemplate(() => new Label())
 			};
 
@@ -72,14 +74,10 @@ namespace Microsoft.Maui.DeviceTests
 				await Task.Delay(100);
 			});
 
-			await Task.Yield();
-			GC.Collect();
-			GC.WaitForPendingFinalizers();
-
-			Assert.NotNull(weakReference);
+			await AssertionExtensions.WaitForGC(weakReference);
 			Assert.False(weakReference.IsAlive, "ObservableCollection should not be alive!");
 			Assert.NotNull(logicalChildren);
-			Assert.True(logicalChildren.Count <= 3, "_logicalChildren should not grow in size!");
+			Assert.True(logicalChildren.Count <= 5, "_logicalChildren should not grow in size!");
 		}
 
 		[Theory]
@@ -111,6 +109,7 @@ namespace Microsoft.Maui.DeviceTests
 			var collectionView = new CollectionView
 			{
 				ItemsLayout = itemsLayout,
+				Background = Colors.Red,
 				ItemTemplate = new DataTemplate(() => new Label() { HeightRequest = templateHeight, WidthRequest = templateWidth }),
 			};
 
@@ -139,7 +138,15 @@ namespace Microsoft.Maui.DeviceTests
 					GenerateItems(itemsCount, data);
 					collectionView.ItemsSource = data;
 
-					await WaitForUIUpdate(frame, collectionView);
+					if (n == 0)
+					{
+						await AssertionExtensions.Wait(() => collectionView.Frame.Width > 0 && collectionView.Frame.Height > 0);
+					}
+					else
+					{
+						await WaitForUIUpdate(frame, collectionView);
+					}
+
 					frame = collectionView.Frame;
 
 					double expectedWidth = layoutOptions == LayoutOptions.Fill
@@ -162,15 +169,114 @@ namespace Microsoft.Maui.DeviceTests
 			});
 		}
 
-		public static IEnumerable<object[]> GenerateLayoutOptionsCombos()
+		[Theory]
+		[InlineData(true, false, false)]
+		[InlineData(true, false, true)]
+		[InlineData(true, true, false)]
+		[InlineData(true, true, true)]
+		[InlineData(false, false, false)]
+		[InlineData(false, false, true)]
+		[InlineData(false, true, false)]
+		[InlineData(false, true, true)]
+		public async Task CollectionViewStructuralItems(bool hasHeader, bool hasFooter, bool hasData)
 		{
-			var layoutOptions = new LayoutOptions[] {
+			SetupBuilder();
 
-#if !WINDOWS
-				LayoutOptions.Center, LayoutOptions.Start, LayoutOptions.End,
+			double containerHeight = 500;
+			double containerWidth = 500;
+			var layout = new Grid() { IgnoreSafeArea = true, HeightRequest = containerHeight, WidthRequest = containerWidth };
+
+			Label headerLabel = hasHeader ? new Label { Text = "header" } : null;
+			Label footerLabel = hasFooter ? new Label { Text = "footer" } : null;
+
+			var collectionView = new CollectionView
+			{
+				ItemsLayout = LinearItemsLayout.Vertical,
+				ItemTemplate = new DataTemplate(() => new Label() { HeightRequest = 20, WidthRequest = 20 }),
+				Header = headerLabel,
+				Footer = footerLabel,
+				ItemsSource = hasData ? null : new ObservableCollection<string> { "data" }
+			};
+
+			layout.Add(collectionView);
+
+			var frame = collectionView.Frame;
+
+			await CreateHandlerAndAddToWindow<LayoutHandler>(layout, async handler =>
+			{
+				await WaitForUIUpdate(frame, collectionView);
+				frame = collectionView.Frame;
+
+#if WINDOWS
+					// On Windows, the ListView pops in and changes the frame, then actually
+					// loads in the data, which updates it again. So we need to wait for the second
+					// update before checking the size
+					await WaitForUIUpdate(frame, collectionView);
+					frame = collectionView.Frame;
 #endif
 
-				LayoutOptions.Fill };
+				if (hasHeader)
+				{
+					Assert.True(headerLabel.Height > 0);
+					Assert.True(headerLabel.Width > 0);
+				}
+
+				if (hasFooter)
+				{
+					Assert.True(footerLabel.Height > 0);
+					Assert.True(footerLabel.Width > 0);
+				}
+			});
+		}
+
+		[Fact(
+#if IOS || MACCATALYST
+		Skip = "Fails on iOS/macOS: https://github.com/dotnet/maui/issues/18517"
+#endif
+		)]
+		public async Task CollectionViewItemsWithFixedWidthAndDifferentHeight()
+		{
+			// This tests a CollectionView that has items that have different heights based on https://github.com/dotnet/maui/issues/16234
+
+			SetupBuilder();
+
+			var collectionView = new CollectionView
+			{
+				ItemTemplate = new DataTemplate(() =>
+				{
+					var label = new Label { WidthRequest = 450 };
+					label.SetBinding(Label.TextProperty, new Binding("."));
+					return label;
+				}),
+				ItemsSource = new ObservableCollection<string>()
+				{
+					"Lorem ipsum dolor sit amet.",
+					"Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
+				}
+			};
+
+			var frame = collectionView.Frame;
+
+			await CreateHandlerAndAddToWindow<CollectionViewHandler>(collectionView, async handler =>
+			{
+				await WaitForUIUpdate(frame, collectionView);
+
+				var labels = collectionView.LogicalChildrenInternal;
+
+				// There should be only 2 items/labels
+				Assert.Equal(2, labels.Count);
+
+				var firstLabelHeight = ((Label)labels[0]).Height;
+				var secondLabelHeight = ((Label)labels[1]).Height;
+
+				// The first label's height should be smaller than the second one since the text won't wrap
+				Assert.True(0 < firstLabelHeight && firstLabelHeight < secondLabelHeight);
+			});
+		}
+
+		public static IEnumerable<object[]> GenerateLayoutOptionsCombos()
+		{
+			var layoutOptions = new LayoutOptions[] { LayoutOptions.Center, LayoutOptions.Start, LayoutOptions.End, LayoutOptions.Fill };
 
 			foreach (var option in layoutOptions)
 			{

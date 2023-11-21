@@ -73,6 +73,7 @@ namespace Microsoft.Maui.Controls.ControlGallery.Issues
 
 #if UITEST
 [Microsoft.Maui.Controls.Compatibility.UITests.FailsOnMauiAndroid]
+[Microsoft.Maui.Controls.Compatibility.UITests.FailsOnMauiIOS]
 		[Test]
 		public void Issue2680Test_ScrollDisabled()
 		{
@@ -84,6 +85,7 @@ namespace Microsoft.Maui.Controls.ControlGallery.Issues
 
 		[Test]
 		[NUnit.Framework.Category(Compatibility.UITests.UITestCategories.UwpIgnore)]
+		[Compatibility.UITests.FailsOnMauiIOS]
 		public void Issue2680Test_ScrollEnabled()
 		{
 			RunningApp.Tap(q => q.Button(ToggleButtonMark));

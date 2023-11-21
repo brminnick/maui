@@ -368,7 +368,7 @@ namespace Microsoft.Maui.Controls.Xaml
 		public static void SetPropertyValue(object xamlelement, XmlName propertyName, object value, object rootElement, INode node, HydrationContext context, IXmlLineInfo lineInfo)
 		{
 			var serviceProvider = new XamlServiceProvider(node, context);
-			var xKey = node is IElementNode && ((IElementNode)node).Properties.ContainsKey(XmlName.xKey) ? ((ValueNode)((IElementNode)node).Properties[XmlName.xKey]).Value as string : null;
+			var xKey = node is IElementNode eNode && eNode.Properties.ContainsKey(XmlName.xKey) ? ((ValueNode)eNode.Properties[XmlName.xKey]).Value as string : null;
 
 			if (TrySetPropertyValue(xamlelement, propertyName, xKey, value, rootElement, lineInfo, serviceProvider, out var xpe))
 				return;
@@ -387,6 +387,8 @@ namespace Microsoft.Maui.Controls.Xaml
 
 			void registerSourceInfo(object target, string path)
 			{
+				if (VisualDiagnostics.GetSourceInfo(target) != null)
+					return;
 				var assemblyName = rootElement.GetType().Assembly?.GetName().Name;
 				if (lineInfo != null)
 					VisualDiagnostics.RegisterSourceInfo(target, new Uri($"{path};assembly={assemblyName}", UriKind.Relative), lineInfo.LineNumber, lineInfo.LinePosition);
@@ -473,19 +475,50 @@ namespace Microsoft.Maui.Controls.Xaml
 				return false;
 
 			var elementType = element.GetType();
-			var eventInfo = elementType.GetRuntimeEvent(localName);
+			var eventInfo = elementType.GetRuntimeEvent(localName) ?? elementType.GetRuntimeEvents().FirstOrDefault(ei => ei.Name == localName && !(ei.AddMethod.IsPrivate));
 			var stringValue = value as string;
 
 			if (eventInfo == null || IsNullOrEmpty(stringValue))
 				return false;
 
-			foreach (var mi in rootElement.GetType().GetRuntimeMethods())
+			var addMethod = eventInfo.GetAddMethod(nonPublic: true);
+			if (addMethod == null)
+				return false;
+
+			var rootElementType = rootElement.GetType();
+			do
 			{
-				if (mi.Name == (string)value)
+				MethodInfo mi = null;
+				try
+				{
+					mi = rootElementType.GetMethod((string)value, BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+				}
+				catch (AmbiguousMatchException)
+				{
+					var n_params = eventInfo.EventHandlerType.GetMethod("Invoke").GetParameters().Length;
+					var methodinfos = rootElementType.GetMethods(BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic)
+						.Where(mi => mi.Name == (string)value && mi.GetParameters().Length == n_params)
+						.ToArray();
+
+					//try to find an event handler with a signature matching the button delegate signature
+					foreach (var methodinfo in methodinfos)
+					{
+						var parameters = methodinfo.GetParameters();
+						for (var i = 0; i < n_params; i++)
+						{
+							if (!parameters[i].ParameterType.IsAssignableFrom(eventInfo.EventHandlerType.GetMethod("Invoke").GetParameters()[i].ParameterType))
+								break;
+						}
+						mi = methodinfo;
+						break;
+					}
+				}
+
+				if (mi != null)
 				{
 					try
 					{
-						eventInfo.AddEventHandler(element, mi.CreateDelegate(eventInfo.EventHandlerType, mi.IsStatic ? null : rootElement));
+						addMethod.Invoke(element, new[] { mi.CreateDelegate(eventInfo.EventHandlerType, mi.IsStatic ? null : rootElement) });
 						return true;
 					}
 					catch (ArgumentException)
@@ -493,7 +526,8 @@ namespace Microsoft.Maui.Controls.Xaml
 						// incorrect method signature
 					}
 				}
-			}
+				rootElementType = rootElementType.BaseType;
+			} while (rootElementType is not null);
 
 			exception = new XamlParseException($"No method {value} with correct signature found on type {rootElement.GetType()}", lineInfo);
 			return false;
@@ -579,17 +613,7 @@ namespace Microsoft.Maui.Controls.Xaml
 					}
 				};
 			else
-				minforetriever = () =>
-				{
-					try
-					{
-						return property.DeclaringType.GetRuntimeProperty(property.PropertyName);
-					}
-					catch (AmbiguousMatchException e)
-					{
-						throw new XamlParseException($"Multiple properties with name '{property.DeclaringType}.{property.PropertyName}' found.", lineInfo, innerException: e);
-					}
-				};
+				minforetriever = () => property.DeclaringType.GetRuntimeProperties().FirstOrDefault(pi => pi.Name == property.PropertyName);
 			var convertedValue = value.ConvertTo(property.ReturnType, minforetriever, serviceProvider, out exception);
 			if (exception != null)
 				return false;

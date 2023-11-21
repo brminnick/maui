@@ -18,6 +18,31 @@ namespace Microsoft.Maui.DeviceTests
 	public partial class ShellTests : ControlsHandlerTestBase
 	{
 		[Fact]
+		public async Task FlyoutContentUpdatesAfterChange()
+		{
+			var flyoutContent = new VerticalStackLayout()
+			{
+				new Label() { Text = "Flyout Content" }
+			};
+
+			await RunShellTest(shell =>
+			{
+				shell.FlyoutBehavior = FlyoutBehavior.Locked;
+			},
+			async (shell, handler) =>
+			{
+				Assert.False(flyoutContent.IsLoaded);
+
+				shell.FlyoutContent = flyoutContent;
+				await OnLoadedAsync(flyoutContent);
+
+				shell.FlyoutContent = null;
+				await OnUnloadedAsync(flyoutContent);
+			});
+		}
+
+#if !MACCATALYST
+		[Fact]
 		public async Task LogicalChildrenPropagateCorrectly()
 		{
 			var flyoutItemGrid = new Grid();
@@ -118,10 +143,7 @@ namespace Microsoft.Maui.DeviceTests
 				}
 				else
 				{
-					AssertionExtensions.AssertWithMessage(() =>
-						Assert.True(flyoutFrame.Height < 56),
-						$"Expected < 56 Actual: {flyoutFrame.Height}"
-					);
+					Assert.True(flyoutFrame.Height < 56, $"Expected < 56 Actual: {flyoutFrame.Height}");
 				}
 			});
 		}
@@ -288,15 +310,9 @@ namespace Microsoft.Maui.DeviceTests
 				else
 					verticalDiff = Math.Abs(Math.Abs(frameWithMargin.Top - (frameWithoutMargin.Top - GetSafeArea().Top)) - 30);
 
-				AssertionExtensions.AssertWithMessage(() =>
-					Assert.True(leftDiff < 0.2),
-					$"{partTesting} Left Margin Incorrect. Frame w/ margin: {frameWithMargin}. Frame w/o margin : {frameWithoutMargin}"
-				);
+				Assert.True(leftDiff < 0.2, $"{partTesting} Left Margin Incorrect. Frame w/ margin: {frameWithMargin}. Frame w/o margin : {frameWithoutMargin}");
 
-				AssertionExtensions.AssertWithMessage(() =>
-					Assert.True(verticalDiff < 0.2),
-					$"{partTesting} Top Margin Incorrect. Frame w/ margin: {frameWithMargin}. Frame w/o margin : {frameWithoutMargin}"
-				);
+				Assert.True(verticalDiff < 0.2, $"{partTesting} Top Margin Incorrect. Frame w/ margin: {frameWithMargin}. Frame w/o margin : {frameWithoutMargin}");
 			});
 		}
 
@@ -311,6 +327,8 @@ namespace Microsoft.Maui.DeviceTests
 			return Thickness.Zero;
 #endif
 		}
+#endif
+
 		async Task RunShellTest(Action<Shell> action, Func<Shell, ShellHandler, Task> testAction)
 		{
 			SetupBuilder();

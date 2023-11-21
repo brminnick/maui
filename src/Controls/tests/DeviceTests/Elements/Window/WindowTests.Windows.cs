@@ -3,11 +3,11 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.DeviceTests.Stubs;
-using Microsoft.Maui.Graphics.Platform;
+using Microsoft.Maui.Graphics;
 using Microsoft.Maui.Graphics.Win2D;
 using Microsoft.Maui.Handlers;
-using Microsoft.Maui.Hosting;
 using Microsoft.Maui.Platform;
+using Microsoft.UI.Windowing;
 using Xunit;
 using WPanel = Microsoft.UI.Xaml.Controls.Panel;
 
@@ -15,6 +15,36 @@ namespace Microsoft.Maui.DeviceTests
 {
 	public partial class WindowTests : ControlsHandlerTestBase
 	{
+		[Fact(DisplayName = "Swapping MainPage doesn't Crash")]
+		public async Task SwappingMainPageDoesntCrash()
+		{
+			SetupBuilder();
+
+			var mainPage = new ContentPage
+			{
+				BackgroundColor = Colors.Red
+			};
+
+			var secondaryPage = new ContentPage
+			{
+				BackgroundColor = Colors.Green
+			};
+
+			await CreateHandlerAndAddToWindow<IWindowHandler>(mainPage, (handler) =>
+			{
+				var mainWindow = handler.VirtualView as Window;
+
+				mainWindow.Page = secondaryPage;
+				Assert.Equal(mainWindow.Page, secondaryPage);
+
+				mainWindow.Page = mainPage;
+				// Without exceptions, the test has passed.
+				Assert.Equal(mainWindow.Page, mainPage);
+
+				Assert.NotNull(mainWindow.Page);
+			});
+		}
+
 		[Fact]
 		public async Task AdornerLayerAdded()
 		{
@@ -94,6 +124,47 @@ namespace Microsoft.Maui.DeviceTests
 			});
 		}
 
+		[Fact]
+		public async Task ToggleFullscreenTitleBarWorks()
+		{
+			SetupBuilder();
+
+			var mainPage = new NavigationPage(new ContentPage()
+			{
+				Title = "title",
+				ToolbarItems =
+				{
+					new ToolbarItem()
+					{
+						Text = "Item"
+					}
+				}
+			});
+
+			await CreateHandlerAndAddToWindow<IWindowHandler>(mainPage, async (handler) =>
+			{
+				var mauiToolBar = GetPlatformToolbar(handler);
+				var presenter = handler.PlatformView.GetAppWindow()?.Presenter as OverlappedPresenter;
+				var rootView = GetWindowRootView(handler);
+				var defaultTitleBarHeight = rootView.AppTitleBarActualHeight;
+				Assert.True(defaultTitleBarHeight > 0);
+				Assert.True(mauiToolBar.GetLocationOnScreen().Value.Y == 32);
+
+				// Disable titlebar, maximize the window
+				presenter.SetBorderAndTitleBar(false, false);
+				presenter.Maximize();
+
+				// Wait for maximize animation to finish
+				Assert.True(await AssertionExtensions.Wait(() => mauiToolBar.GetLocationOnScreen().Value.Y == 0));
+
+				// Now restore the window
+				presenter.SetBorderAndTitleBar(true, true);
+				presenter.Restore();
+
+				Assert.True(await AssertionExtensions.Wait(() => mauiToolBar.GetLocationOnScreen().Value.Y == 32));
+			});
+		}
+
 		[Theory]
 		[ClassData(typeof(WindowPageSwapTestCases))]
 		public async Task HeaderCorrectlyOffsetsWhenSwappingMainPage(WindowPageSwapTestCase swapOrder)
@@ -138,6 +209,7 @@ namespace Microsoft.Maui.DeviceTests
 		}
 
 		[Collection(ControlsHandlerTestBase.RunInNewWindowCollection)]
+		[Category(TestCategory.Lifecycle)]
 		public class WindowTestsRunInNewWindowCollection : ControlsHandlerTestBase
 		{
 			[Fact]

@@ -25,41 +25,33 @@ namespace Microsoft.Maui.Controls
 		/// <summary>Bindable property for attached property <c>VisualStateGroups</c>.</summary>
 		public static readonly BindableProperty VisualStateGroupsProperty =
 			BindableProperty.CreateAttached("VisualStateGroups", typeof(VisualStateGroupList), typeof(VisualElement),
-				defaultValue: null, propertyChanged: VisualStateGroupsPropertyChanged, propertyChanging: VisualStateGroupsPropertyChanging,
+				defaultValue: null, propertyChanged: VisualStateGroupsPropertyChanged,
 				defaultValueCreator: bindable => new VisualStateGroupList(true) { VisualElement = (VisualElement)bindable });
 
 		static void VisualStateGroupsPropertyChanged(BindableObject bindable, object oldValue, object newValue)
 		{
 			if (oldValue is VisualStateGroupList oldVisualStateGroupList && oldVisualStateGroupList.VisualElement is VisualElement oldElement)
 			{
-				bool fromStyle = false;
-				if (oldValueContext.TryGetValue(bindable, out var oldContext))
-					fromStyle = (oldContext.Attributes & BindableObject.BindableContextAttributes.IsSetFromStyle) == BindableObject.BindableContextAttributes.IsSetFromStyle;
+				var vsgSpecificity = ((VisualStateGroupList)oldValue).Specificity;
+				var specificity = new SetterSpecificity(1, 0, 0, 0, vsgSpecificity.Style, vsgSpecificity.Id, vsgSpecificity.Class, vsgSpecificity.Type);
 
 				foreach (var group in oldVisualStateGroupList)
 				{
 					if (group.CurrentState is VisualState state)
 						foreach (var setter in state.Setters)
-							setter.UnApply(oldElement, fromStyle: fromStyle);
+							setter.UnApply(oldElement, specificity);
 				}
 				oldVisualStateGroupList.VisualElement = null;
 			}
 
 			var visualElement = (VisualElement)bindable;
 
-			((VisualStateGroupList)newValue).VisualElement = visualElement;
+			if (newValue != null)
+				((VisualStateGroupList)newValue).VisualElement = visualElement;
 
 			visualElement.ChangeVisualState();
 
 			UpdateStateTriggers(visualElement);
-		}
-		static ConditionalWeakTable<BindableObject, BindableObject.BindablePropertyContext> oldValueContext = new ConditionalWeakTable<BindableObject, BindableObject.BindablePropertyContext>();
-
-		static void VisualStateGroupsPropertyChanging(BindableObject bindable, object oldValue, object newValue)
-		{
-			if (oldValueContext.TryGetValue(bindable, out _))
-				oldValueContext.Remove(bindable);
-			oldValueContext.Add(bindable, bindable.GetContext(VisualStateGroupsProperty));
 		}
 
 		/// <include file="../../docs/Microsoft.Maui.Controls/VisualStateManager.xml" path="//Member[@MemberName='GetVisualStateGroups']/Docs/*" />
@@ -78,9 +70,13 @@ namespace Microsoft.Maui.Controls
 				return false;
 			}
 
-			var groups = (IList<VisualStateGroup>)visualElement.GetValue(VisualStateGroupsProperty);
+			var groups = (VisualStateGroupList)visualElement.GetValue(VisualStateGroupsProperty);
 			var context = visualElement.GetContext(VisualStateGroupsProperty);
-			var fromStyle = (context.Attributes & BindableObject.BindableContextAttributes.IsSetFromStyle) == BindableObject.BindableContextAttributes.IsSetFromStyle;
+			var vsgSpecificity = context.Values.GetSpecificityAndValue().Key;
+			if (vsgSpecificity == SetterSpecificity.DefaultValue)
+				vsgSpecificity = new SetterSpecificity();
+			groups.Specificity = vsgSpecificity;
+			var specificity = new SetterSpecificity(1, 0, 0, 0, vsgSpecificity.Style, vsgSpecificity.Id, vsgSpecificity.Class, vsgSpecificity.Type);
 
 			foreach (VisualStateGroup group in groups)
 			{
@@ -102,7 +98,7 @@ namespace Microsoft.Maui.Controls
 				{
 					foreach (Setter setter in group.CurrentState.Setters)
 					{
-						setter.UnApply(visualElement, fromStyle: fromStyle);
+						setter.UnApply(visualElement, specificity);
 					}
 				}
 
@@ -112,7 +108,7 @@ namespace Microsoft.Maui.Controls
 				// Apply the setters from the new state
 				foreach (Setter setter in target.Setters)
 				{
-					setter.Apply(visualElement, fromStyle: fromStyle);
+					setter.Apply(visualElement, specificity);
 				}
 
 				return true;
@@ -324,6 +320,7 @@ namespace Microsoft.Maui.Controls
 		}
 
 		internal VisualElement VisualElement { get; set; }
+		internal SetterSpecificity Specificity { get; set; }
 
 		void OnStatesChanged()
 		{
@@ -488,6 +485,9 @@ namespace Microsoft.Maui.Controls
 				clone.States.Add(state.Clone());
 			}
 
+			if (DebuggerHelper.DebuggerIsAttached && VisualDiagnostics.GetSourceInfo(this) is SourceInfo info)
+				VisualDiagnostics.RegisterSourceInfo(clone, info.SourceUri, info.LineNumber, info.LinePosition);
+
 			return clone;
 		}
 
@@ -599,6 +599,9 @@ namespace Microsoft.Maui.Controls
 				clone.StateTriggers.Add(stateTrigger);
 			}
 
+			if (DebuggerHelper.DebuggerIsAttached && VisualDiagnostics.GetSourceInfo(this) is SourceInfo info)
+				VisualDiagnostics.RegisterSourceInfo(clone, info.SourceUri, info.LineNumber, info.LinePosition);
+
 			return clone;
 		}
 
@@ -655,15 +658,18 @@ namespace Microsoft.Maui.Controls
 	{
 		internal static IList<VisualStateGroup> Clone(this IList<VisualStateGroup> groups)
 		{
-			var actual = new VisualStateGroupList();
+			var clone = new VisualStateGroupList();
 
 			foreach (var group in groups)
 			{
-				group.VisualElement = actual.VisualElement;
-				actual.Add(group.Clone());
+				group.VisualElement = clone.VisualElement;
+				clone.Add(group.Clone());
 			}
 
-			return actual;
+			if (DebuggerHelper.DebuggerIsAttached && VisualDiagnostics.GetSourceInfo(groups) is SourceInfo info)
+				VisualDiagnostics.RegisterSourceInfo(clone, info.SourceUri, info.LineNumber, info.LinePosition);
+
+			return clone;
 		}
 
 		internal static bool HasVisualState(this VisualElement element, string name)

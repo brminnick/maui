@@ -83,13 +83,13 @@ namespace Microsoft.Maui.Controls
 			_expression.Apply(fromTarget);
 		}
 
-		internal override async void Apply(object newContext, BindableObject bindObj, BindableProperty targetProperty, bool fromBindingContextChanged = false)
+		internal override async void Apply(object newContext, BindableObject bindObj, BindableProperty targetProperty, bool fromBindingContextChanged, SetterSpecificity specificity)
 		{
 			var view = bindObj as Element;
 			if (view == null)
 				throw new InvalidOperationException();
 
-			base.Apply(newContext, bindObj, targetProperty, fromBindingContextChanged);
+			base.Apply(newContext, bindObj, targetProperty, fromBindingContextChanged, specificity);
 
 			Element templatedParent = await TemplateUtilities.FindTemplatedParentAsync(view);
 			ApplyInner(templatedParent, bindObj, targetProperty);
@@ -97,7 +97,12 @@ namespace Microsoft.Maui.Controls
 
 		internal override BindingBase Clone()
 		{
-			return new TemplateBinding(Path, Mode) { Converter = Converter, ConverterParameter = ConverterParameter, StringFormat = StringFormat };
+			var clone = new TemplateBinding(Path, Mode) { Converter = Converter, ConverterParameter = ConverterParameter, StringFormat = StringFormat };
+
+			if (DebuggerHelper.DebuggerIsAttached && VisualDiagnostics.GetSourceInfo(this) is SourceInfo info)
+				VisualDiagnostics.RegisterSourceInfo(clone, info.SourceUri, info.LineNumber, info.LinePosition);
+
+			return clone;
 		}
 
 		internal override object GetSourceValue(object value, Type targetPropertyType)
@@ -129,7 +134,7 @@ namespace Microsoft.Maui.Controls
 			if (_expression == null && templatedParent != null)
 				_expression = new BindingExpression(this, SelfPath);
 
-			_expression?.Apply(templatedParent, bindableObject, targetProperty);
+			_expression?.Apply(templatedParent, bindableObject, targetProperty, SetterSpecificity.FromBinding);
 		}
 
 		BindingExpression GetBindingExpression(string path)

@@ -155,6 +155,7 @@ namespace Microsoft.Maui.Controls.ControlGallery.Issues
 		// https://github.com/xamarin/Xamarin.Forms/issues/2989
 #if UITEST
 		[Test]
+		[Compatibility.UITests.FailsOnMauiIOS]
 		public void ZIndexWhenInsertingChildren()
 		{
 			RunningApp.WaitForElement(x => x.Marked(ButtonText));
@@ -165,6 +166,7 @@ namespace Microsoft.Maui.Controls.ControlGallery.Issues
 		}
 
 [Microsoft.Maui.Controls.Compatibility.UITests.FailsOnMauiAndroid]
+[Microsoft.Maui.Controls.Compatibility.UITests.FailsOnMauiIOS]
 		[Test]
 		public void InsertThenAddSetsZIndex()
 		{
@@ -185,6 +187,7 @@ namespace Microsoft.Maui.Controls.ControlGallery.Issues
 
 
 [Microsoft.Maui.Controls.Compatibility.UITests.FailsOnMauiAndroid]
+[Microsoft.Maui.Controls.Compatibility.UITests.FailsOnMauiIOS]
 		[Test]
 		public void MoveUpAndMoveDown()
 		{

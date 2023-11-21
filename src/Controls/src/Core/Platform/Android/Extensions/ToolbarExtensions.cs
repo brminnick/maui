@@ -147,12 +147,21 @@ namespace Microsoft.Maui.Controls.Platform
 		public static void UpdateIconColor(this AToolbar nativeToolbar, Toolbar toolbar)
 		{
 			var navIconColor = toolbar.IconColor;
-			if (navIconColor != null && nativeToolbar.NavigationIcon != null)
+			if (navIconColor is null)
+				return;
+
+			var platformColor = navIconColor.ToPlatform();
+			if (nativeToolbar.NavigationIcon is Drawable navigationIcon)
 			{
-				if (nativeToolbar.NavigationIcon is DrawerArrowDrawable dad)
+				if (navigationIcon is DrawerArrowDrawable dad)
 					dad.Color = AGraphics.Color.White;
 
-				nativeToolbar.NavigationIcon.SetColorFilter(navIconColor, FilterMode.SrcAtop);
+				navigationIcon.SetColorFilter(platformColor, FilterMode.SrcAtop);
+			}
+
+			if (nativeToolbar.OverflowIcon is Drawable overflowIcon)
+			{
+				overflowIcon.SetColorFilter(platformColor, FilterMode.SrcAtop);
 			}
 		}
 

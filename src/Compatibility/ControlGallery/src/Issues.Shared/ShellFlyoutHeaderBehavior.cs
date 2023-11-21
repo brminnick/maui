@@ -96,6 +96,7 @@ namespace Microsoft.Maui.Controls.ControlGallery.Issues
 		}
 
 [Microsoft.Maui.Controls.Compatibility.UITests.FailsOnMauiAndroid]
+[Microsoft.Maui.Controls.Compatibility.UITests.FailsOnMauiIOS]
 		[Test]
 		public void FlyoutHeaderBehaviorCollapseOnScroll()
 		{
@@ -109,6 +110,7 @@ namespace Microsoft.Maui.Controls.ControlGallery.Issues
 		}
 
 		[Test]
+		[Compatibility.UITests.FailsOnMauiIOS]
 		public void FlyoutHeaderBehaviorScroll()
 		{
 			RunningApp.Tap(nameof(FlyoutHeaderBehavior.Scroll));

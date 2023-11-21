@@ -1,6 +1,7 @@
 #nullable disable
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Microsoft.Maui.Graphics;
 
 namespace Microsoft.Maui.Controls
@@ -11,23 +12,23 @@ namespace Microsoft.Maui.Controls
 		internal static void RefreshPropertyValue(this BindableObject self, BindableProperty property, object value)
 		{
 			var ctx = self.GetContext(property);
-			if (ctx?.Binding is not null)
+			if (ctx != null && ctx.Bindings.Count > 0)
 			{
+				var binding = ctx.Bindings.Last().Value;
+
 				// support bound properties
 				if (!ctx.Attributes.HasFlag(BindableObject.BindableContextAttributes.IsBeingSet))
-					ctx.Binding.Apply(false);
+					binding.Apply(false);
 			}
 			else
 			{
 				// support normal/code properties
-				self.SetValue(property, value);
+				self.SetValue(property, value, SetterSpecificity.FromHandler);
 			}
 		}
 
 		internal static void PropagateBindingContext<T>(this BindableObject self, IEnumerable<T> children)
-		{
-			PropagateBindingContext(self, children, BindableObject.SetInheritedBindingContext);
-		}
+			=> PropagateBindingContext(self, children, BindableObject.SetInheritedBindingContext);
 
 		internal static void PropagateBindingContext<T>(this BindableObject self, IEnumerable<T> children, Action<BindableObject, object> setChildBindingContext)
 		{
@@ -51,9 +52,9 @@ namespace Microsoft.Maui.Controls
 									  string stringFormat = null)
 		{
 			if (self == null)
-				throw new ArgumentNullException("self");
+				throw new ArgumentNullException(nameof(self));
 			if (targetProperty == null)
-				throw new ArgumentNullException("targetProperty");
+				throw new ArgumentNullException(nameof(targetProperty));
 
 			var binding = new Binding(path, mode, converter, stringFormat: stringFormat);
 			self.SetBinding(targetProperty, binding);
@@ -85,6 +86,18 @@ namespace Microsoft.Maui.Controls
 			return false;
 		}
 
+		internal static void AddRemoveLogicalChildren(this BindableObject bindable, object oldValue, object newValue)
+		{
+			if (!(bindable is Element owner))
+				return;
+
+			if (oldValue is Element oldView)
+				owner.RemoveLogicalChild(oldView);
+
+			if (newValue is Element newView)
+				owner.AddLogicalChild(newView);
+		}
+
 		internal static bool TrySetAppTheme(
 			this BindableObject self,
 			string lightResourceKey,
@@ -112,6 +125,7 @@ namespace Microsoft.Maui.Controls
 		public static void SetAppTheme<T>(this BindableObject self, BindableProperty targetProperty, T light, T dark) => self.SetBinding(targetProperty, new AppThemeBinding { Light = light, Dark = dark });
 
 		/// <include file="../../docs/Microsoft.Maui.Controls/BindableObjectExtensions.xml" path="//Member[@MemberName='SetAppThemeColor']/Docs/*" />
-		public static void SetAppThemeColor(this BindableObject self, BindableProperty targetProperty, Color light, Color dark) => SetAppTheme(self, targetProperty, light, dark);
+		public static void SetAppThemeColor(this BindableObject self, BindableProperty targetProperty, Color light, Color dark)
+			=> SetAppTheme(self, targetProperty, light, dark);
 	}
 }

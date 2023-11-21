@@ -18,7 +18,11 @@ namespace Microsoft.Maui.Essentials.DeviceTests
 			SecureStorage.RemoveAll();
 		}
 
-		[Theory]
+		[Theory
+#if MACCATALYST
+			(Skip = "Need to configure entitlements.")
+#endif
+		]
 		[InlineData("test.txt", "data")]
 		[InlineData("noextension", "data2")]
 		[InlineData("funny*&$%@!._/\\chars", "data3")]
@@ -42,7 +46,11 @@ namespace Microsoft.Maui.Essentials.DeviceTests
 			Assert.Equal(data, c);
 		}
 
-		[Theory]
+		[Theory
+#if MACCATALYST
+			(Skip = "Need to configure entitlements.")
+#endif
+		]
 		[InlineData("test.txt", "data1", "data2")]
 		public async Task Saves_Same_Key_Twice(string key, string data1, string data2)
 		{
@@ -79,16 +87,39 @@ namespace Microsoft.Maui.Essentials.DeviceTests
 			c = await SecureStorage.GetAsync(key);
 			Assert.Equal(data, c);
 		}
-#endif
 
 		[Fact]
+		public void Set_Get_Wait_MultipleTimes()
+		{
+			for (int i = 0; i < 100; i++)
+			{
+				var set = SecureStorage.SetAsync(i.ToString(), i.ToString());
+				set.Wait();
+
+				var get = SecureStorage.GetAsync(i.ToString());
+				get.Wait();
+
+				Assert.Equal(i.ToString(), get.Result);
+			}
+		}
+#endif
+
+		[Fact
+#if MACCATALYST
+			(Skip = "Need to configure entitlements.")
+#endif
+		]
 		public async Task Non_Existent_Key_Returns_Null()
 		{
 			var v = await SecureStorage.GetAsync("THIS_KEY_SHOULD_NOT_EXIST");
 			Assert.Null(v);
 		}
 
-		[Theory]
+		[Theory
+#if MACCATALYST
+			(Skip = "Need to configure entitlements.")
+#endif
+		]
 		[InlineData("KEY_TO_REMOVE1")]
 		[InlineData("KEY_TO_REMOVE2")]
 		public async Task Remove_Key(string key)
@@ -102,7 +133,11 @@ namespace Microsoft.Maui.Essentials.DeviceTests
 			Assert.Null(v);
 		}
 
-		[Theory]
+		[Theory
+#if MACCATALYST
+			(Skip = "Need to configure entitlements.")
+#endif
+		]
 		[InlineData("KEYS_TO_REMOVEA1", "KEYS_TO_REMOVEA2")]
 		[InlineData("KEYS_TO_REMOVEB1", "KEYS_TO_REMOVEB2")]
 		public async Task Remove_All_Keys(string key1, string key2)
@@ -143,7 +178,15 @@ namespace Microsoft.Maui.Essentials.DeviceTests
 		}
 #endif
 
-		[Fact]
+		[Fact
+#if MACCATALYST
+			(Skip = "Need to configure entitlements.")
+#endif
+
+#if WINDOWS
+			(Skip = "IOException on unpackaged: The process cannot access the file...")
+#endif
+		]
 		public async Task Set_Get_Async_MultipleTimes()
 		{
 			await Parallel.ForEachAsync(Enumerable.Range(0, 100), async (i, _) =>
@@ -157,7 +200,15 @@ namespace Microsoft.Maui.Essentials.DeviceTests
 			}
 		}
 
-		[Fact]
+		[Fact
+#if MACCATALYST
+			(Skip = "Need to configure entitlements.")
+#endif
+
+#if WINDOWS
+			(Skip = "IOException on unpackaged: The process cannot access the file...")
+#endif
+		]
 		public async Task Set_Get_Remove_Async_MultipleTimes()
 		{
 			await Parallel.ForEachAsync(Enumerable.Range(0, 100), async (i, _) =>

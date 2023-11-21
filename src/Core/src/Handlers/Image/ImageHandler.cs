@@ -31,10 +31,11 @@ namespace Microsoft.Maui.Handlers
 		};
 
 		ImageSourcePartLoader? _imageSourcePartLoader;
-		public ImageSourcePartLoader SourceLoader =>
-			_imageSourcePartLoader ??= new ImageSourcePartLoader(this, () => VirtualView, OnSetImageSource);
 
-		public ImageHandler() : base(Mapper)
+		public virtual ImageSourcePartLoader SourceLoader =>
+			_imageSourcePartLoader ??= new ImageSourcePartLoader(new ImageImageSourcePartSetter(this));
+
+		public ImageHandler() : base(Mapper, CommandMapper)
 		{
 		}
 
@@ -53,5 +54,13 @@ namespace Microsoft.Maui.Handlers
 		IImage IImageHandler.VirtualView => VirtualView;
 
 		PlatformView IImageHandler.PlatformView => PlatformView;
+
+		partial class ImageImageSourcePartSetter : ImageSourcePartSetter<IImageHandler>
+		{
+			public ImageImageSourcePartSetter(IImageHandler handler)
+				: base(handler)
+			{
+			}
+		}
 	}
 }

@@ -1,10 +1,50 @@
 version: 2
+registries:
+  custom-nuget:
+    type: nuget-feed
+    url: https://api.nuget.org/v3/index.json
 updates:
 - package-ecosystem: nuget
   directory: "/"
+  registries:
+    - custom-nuget
   schedule:
     interval: daily
+    # Run at 10pm Pacific time
+    time: "22:00"
+    timezone: "America/Los_Angeles"
   open-pull-requests-limit: 25
+  groups:
+    AndroidX:
+      patterns:
+        - "Xamarin.AndroidX.*"
+        - "Xamarin.Build.Download"
+        - "Xamarin.Google.Android.Material"
+        - "Xamarin.Google.Crypto.Tink.Android"
+        - "Xamarin.GooglePlayServices.Maps"
+        - "Xamarin.Android.Glide*"
+    AspNetCore:
+      patterns:
+        - "Microsoft.AspNetCore.*"
+        - "Microsoft.JSInterop"
+    SkiaSharp:
+      patterns:
+        - "SkiaSharp.*"
+        - "Svg.*"
+        - "ShimSkiaSharp"
+        - "Fizzler"
+    MicrosoftExtensions:
+      patterns:
+        - "Microsoft.Extensions.*"
+    WindowsAppSDK:
+      patterns:
+        - "Microsoft.Graphics.Win2D"
+        - "Microsoft.Windows.SDK.BuildTools"
+        - "Microsoft.WindowsAppSDK"
+    xunit:
+      patterns:
+        - "xunit"
+        - "xunit.runner.*"
   ignore:
     - dependency-name: "MicrosoftMauiGraphicsVersion"         # maestro
     - dependency-name: "Microsoft.Maui.Graphics*"             # maestro
@@ -15,7 +55,6 @@ updates:
     - dependency-name: "HarfBuzzSharp*"                       # needs to be done manually with maui graphics
     - dependency-name: "Newtonsoft.Json"                      # needs to be done manually to match VS
     - dependency-name: "Microsoft.Build*"                     # these packages neet to be kept on old version that supports netstandard2.0
-    - dependency-name: "Microsoft.TemplateEngine.Tasks"
     - dependency-name: "Selenium.*"                           # needs to be done manually because other packages need to be compiled with these new versions
       
   labels:

@@ -1,6 +1,8 @@
 #nullable disable
 using System;
 using Microsoft.Maui.ApplicationModel;
+using Microsoft.Maui.Controls.Internals;
+using Microsoft.Maui.Controls.Xaml.Diagnostics;
 
 namespace Microsoft.Maui.Controls
 {
@@ -9,15 +11,24 @@ namespace Microsoft.Maui.Controls
 		WeakReference<BindableObject> _weakTarget;
 		BindableProperty _targetProperty;
 		bool _attached;
+		SetterSpecificity specificity;
 
-		internal override BindingBase Clone() => new AppThemeBinding
+		internal override BindingBase Clone()
 		{
-			Light = Light,
-			_isLightSet = _isLightSet,
-			Dark = Dark,
-			_isDarkSet = _isDarkSet,
-			Default = Default
-		};
+			var clone = new AppThemeBinding
+			{
+				Light = Light,
+				_isLightSet = _isLightSet,
+				Dark = Dark,
+				_isDarkSet = _isDarkSet,
+				Default = Default
+			};
+
+			if (DebuggerHelper.DebuggerIsAttached && VisualDiagnostics.GetSourceInfo(this) is SourceInfo info)
+				VisualDiagnostics.RegisterSourceInfo(clone, info.SourceUri, info.LineNumber, info.LinePosition);
+
+			return clone;
+		}
 
 		internal override void Apply(bool fromTarget)
 		{
@@ -26,12 +37,13 @@ namespace Microsoft.Maui.Controls
 			SetAttached(true);
 		}
 
-		internal override void Apply(object context, BindableObject bindObj, BindableProperty targetProperty, bool fromBindingContextChanged = false)
+		internal override void Apply(object context, BindableObject bindObj, BindableProperty targetProperty, bool fromBindingContextChanged, SetterSpecificity specificity)
 		{
 			_weakTarget = new WeakReference<BindableObject>(bindObj);
 			_targetProperty = targetProperty;
-			base.Apply(context, bindObj, targetProperty, fromBindingContextChanged);
-			ApplyCore();
+			base.Apply(context, bindObj, targetProperty, fromBindingContextChanged, specificity);
+			this.specificity = specificity;
+			ApplyCore(false);
 			SetAttached(true);
 		}
 
@@ -59,7 +71,21 @@ namespace Microsoft.Maui.Controls
 			else
 				Set();
 
-			void Set() => target.SetValueCore(_targetProperty, GetValue());
+			void Set()
+			{
+				var value = GetValue();
+				if (value is DynamicResource dynamicResource)
+					target.SetDynamicResource(_targetProperty, dynamicResource.Key, specificity);
+				else
+				{
+					if (!BindingExpression.TryConvert(ref value, _targetProperty, _targetProperty.ReturnType, true))
+					{
+						BindingDiagnostics.SendBindingFailure(this, null, target, _targetProperty, "AppThemeBinding", BindingExpression.CannotConvertTypeErrorMessage, value, _targetProperty.ReturnType);
+						return;
+					}
+					target.SetValueCore(_targetProperty, value, Internals.SetValueFlags.ClearDynamicResource, BindableObject.SetValuePrivateFlags.Default | BindableObject.SetValuePrivateFlags.Converted, specificity);
+				}
+			};
 		}
 
 		object _light;

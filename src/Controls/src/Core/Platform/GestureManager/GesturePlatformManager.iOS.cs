@@ -101,7 +101,12 @@ namespace Microsoft.Maui.Controls.Platform
 					PlatformView.RemoveInteraction(interaction);
 				}
 			}
+
+			_interactions.Clear();
 			_gestureRecognizers.Clear();
+
+			_dragAndDropDelegate?.Disconnect();
+			_dragAndDropDelegate = null;
 
 			Disconnect();
 
@@ -244,19 +249,20 @@ namespace Microsoft.Maui.Controls.Platform
 						eventTracker._handler?.MauiContext?.GetPlatformWindow() is UIWindow window)
 					{
 						var originPoint = r.LocationInView(eventTracker?.PlatformView);
+						var platformPointerArgs = new PlatformPointerEventArgs(r.View, r);
 
 						switch (r.State)
 						{
 							case UIGestureRecognizerState.Began:
-								pointerGestureRecognizer.SendPointerEntered(view, (relativeTo) => CalculatePosition(relativeTo, originPoint, weakRecognizer, weakEventTracker));
+								pointerGestureRecognizer.SendPointerEntered(view, (relativeTo) => CalculatePosition(relativeTo, originPoint, weakRecognizer, weakEventTracker), platformPointerArgs);
 								break;
 							case UIGestureRecognizerState.Changed:
-								pointerGestureRecognizer.SendPointerMoved(view, (relativeTo) => CalculatePosition(relativeTo, originPoint, weakRecognizer, weakEventTracker));
+								pointerGestureRecognizer.SendPointerMoved(view, (relativeTo) => CalculatePosition(relativeTo, originPoint, weakRecognizer, weakEventTracker), platformPointerArgs);
 								break;
 							case UIGestureRecognizerState.Cancelled:
 							case UIGestureRecognizerState.Failed:
 							case UIGestureRecognizerState.Ended:
-								pointerGestureRecognizer.SendPointerExited(view, (relativeTo) => CalculatePosition(relativeTo, originPoint, weakRecognizer, weakEventTracker));
+								pointerGestureRecognizer.SendPointerExited(view, (relativeTo) => CalculatePosition(relativeTo, originPoint, weakRecognizer, weakEventTracker), platformPointerArgs);
 								break;
 						}
 					}
@@ -605,6 +611,7 @@ namespace Microsoft.Maui.Controls.Platform
 					{
 						var interaction = new UIDragInteraction(_dragAndDropDelegate);
 						interaction.Enabled = true;
+						_interactions.Add(interaction);
 						PlatformView.AddInteraction(interaction);
 					}
 				}
@@ -616,10 +623,12 @@ namespace Microsoft.Maui.Controls.Platform
 					if (uIDropInteraction == null && PlatformView != null)
 					{
 						var interaction = new UIDropInteraction(_dragAndDropDelegate);
+						_interactions.Add(interaction);
 						PlatformView.AddInteraction(interaction);
 					}
 				}
 			}
+
 			if (OperatingSystem.IsIOSVersionAtLeast(11))
 			{
 				if (!dragFound && uIDragInteraction != null && PlatformView != null)

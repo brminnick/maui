@@ -32,10 +32,6 @@ namespace Microsoft.Maui.Controls.Handlers.Items
 		bool _emptyViewDisplayed;
 		double _previousHorizontalOffset;
 		double _previousVerticalOffset;
-		double _previousItemSpacing;
-		double _previousHorizontalItemSpacing;
-		double _previousVerticalItemSpacing;
-
 		protected ListViewBase ListViewBase => PlatformView;
 		protected TItemsView ItemsView => VirtualView;
 		protected TItemsView Element => VirtualView;
@@ -55,6 +51,7 @@ namespace Microsoft.Maui.Controls.Handlers.Items
 		{
 			base.ConnectHandler(platformView);
 			VirtualView.ScrollToRequested += ScrollToRequested;
+			FindScrollViewer(ListViewBase);
 		}
 
 		protected override void DisconnectHandler(ListViewBase platformView)
@@ -105,14 +102,60 @@ namespace Microsoft.Maui.Controls.Handlers.Items
 
 		public static void MapItemsUpdatingScrollMode(ItemsViewHandler<TItemsView> handler, ItemsView itemsView)
 		{
+			handler.UpdateItemsUpdatingScrollMode();
+		}
 
+		void UpdateItemsUpdatingScrollMode()
+		{
+			if (PlatformView is null || PlatformView.Items is null)
+				return;
+
+			if (VirtualView.ItemsUpdatingScrollMode == ItemsUpdatingScrollMode.KeepScrollOffset)
+			{
+				// The scroll position is maintained when new items are added as the default,
+				// so we don't need to watch for data changes
+				PlatformView.Items.VectorChanged -= OnItemsVectorChanged;
+			}
+			else
+			{
+				PlatformView.Items.VectorChanged -= OnItemsVectorChanged;
+				PlatformView.Items.VectorChanged += OnItemsVectorChanged;
+			}
+		}
+
+		void OnItemsVectorChanged(global::Windows.Foundation.Collections.IObservableVector<object> sender, global::Windows.Foundation.Collections.IVectorChangedEventArgs @event)
+		{
+			if (VirtualView is null)
+				return;
+
+			if (sender is not ItemCollection items)
+				return;
+
+			var itemsCount = items.Count;
+
+			if (itemsCount == 0)
+				return;
+
+			if (VirtualView.ItemsUpdatingScrollMode == ItemsUpdatingScrollMode.KeepItemsInView)
+			{
+				var firstItem = items[0];
+				// Keeps the first item in the list displayed when new items are added.
+				ListViewBase.ScrollIntoView(firstItem);
+			}
+
+			if (VirtualView.ItemsUpdatingScrollMode == ItemsUpdatingScrollMode.KeepLastItemInView)
+			{
+				var lastItem = items[itemsCount - 1];
+				// Adjusts the scroll offset to keep the last item in the list displayed when new items are added.
+				ListViewBase.ScrollIntoView(lastItem);
+			}
 		}
 
 		protected abstract ListViewBase SelectListViewBase();
 
 		protected virtual void CleanUpCollectionViewSource()
 		{
-			if (CollectionViewSource != null)
+			if (CollectionViewSource is not null)
 			{
 				if (CollectionViewSource.Source is ObservableItemTemplateCollection observableItemTemplateCollection)
 				{
@@ -127,9 +170,18 @@ namespace Microsoft.Maui.Controls.Handlers.Items
 				CollectionViewSource.Source = null;
 				CollectionViewSource = null;
 			}
-			VirtualView?.ClearLogicalChildren();
 
-			if (VirtualView?.ItemsSource == null)
+			// Remove all children inside the ItemsSource
+			if (VirtualView is not null)
+			{
+				foreach (var item in ListViewBase.GetChildren<ItemContentControl>())
+				{
+					var element = item.GetVisualElement();
+					VirtualView.RemoveLogicalChild(element);
+				}
+			}
+
+			if (VirtualView?.ItemsSource is null)
 			{
 				ListViewBase.ItemsSource = null;
 				return;
@@ -283,36 +335,18 @@ namespace Microsoft.Maui.Controls.Handlers.Items
 
 		protected virtual void UpdateItemsLayout()
 		{
-			if (ListViewBase is FormsGridView gridView)
-			{
-				if (Layout is LinearItemsLayout linearItemsLayout)
-				{
-					gridView.Orientation = linearItemsLayout.ToPlatform();
+			ListViewBase.IsSynchronizedWithCurrentItem = false;
 
-					gridView.Span = 1;
+			FindScrollViewer(ListViewBase);
 
-					if (linearItemsLayout.ItemSpacing != _previousItemSpacing)
-					{
-						_previousItemSpacing = linearItemsLayout.ItemSpacing;
-						gridView.ItemContainerStyle = linearItemsLayout.GetItemContainerStyle();
-					}
-				}
+			_defaultHorizontalScrollVisibility = null;
+			_defaultVerticalScrollVisibility = null;
 
-				if (Layout is GridItemsLayout gridItemsLayout)
-				{
-					gridView.Orientation = gridItemsLayout.ToPlatform();
-
-					gridView.Span = gridItemsLayout.Span;
-
-					if (gridItemsLayout.HorizontalItemSpacing != _previousHorizontalItemSpacing ||
-						gridItemsLayout.VerticalItemSpacing != _previousVerticalItemSpacing)
-					{
-						_previousHorizontalItemSpacing = gridItemsLayout.HorizontalItemSpacing;
-						_previousVerticalItemSpacing = gridItemsLayout.VerticalItemSpacing;
-						gridView.ItemContainerStyle = gridItemsLayout.GetItemContainerStyle();
-					}
-				}
-			}
+			UpdateItemTemplate();
+			UpdateItemsSource();
+			UpdateVerticalScrollBarVisibility();
+			UpdateHorizontalScrollBarVisibility();
+			UpdateEmptyView();
 		}
 
 		void FindScrollViewer(ListViewBase listView)
@@ -337,8 +371,19 @@ namespace Microsoft.Maui.Controls.Handlers.Items
 
 		void UpdateVerticalScrollBarVisibility()
 		{
+			if (Element.VerticalScrollBarVisibility != ScrollBarVisibility.Default)
+			{
+				// If the value is changing to anything other than the default, record the default 
+				if (_defaultVerticalScrollVisibility == null)
+					_defaultVerticalScrollVisibility = ScrollViewer.GetVerticalScrollBarVisibility(Control);
+			}
+
 			if (_defaultVerticalScrollVisibility == null)
-				_defaultVerticalScrollVisibility = ScrollViewer.GetVerticalScrollBarVisibility(Control);
+			{
+				// If the default has never been recorded, then this has never been set to anything but the 
+				// default value; there's nothing to do.
+				return;
+			}
 
 			switch (Element.VerticalScrollBarVisibility)
 			{
@@ -375,6 +420,16 @@ namespace Microsoft.Maui.Controls.Handlers.Items
 
 		protected virtual void OnScrollViewerFound(ScrollViewer scrollViewer)
 		{
+			if (_scrollViewer == scrollViewer)
+			{
+				return;
+			}
+
+			if (_scrollViewer != null)
+			{
+				_scrollViewer.ViewChanged -= ScrollViewChanged;
+			}
+
 			_scrollViewer = scrollViewer;
 			_scrollViewer.ViewChanged += ScrollViewChanged;
 		}

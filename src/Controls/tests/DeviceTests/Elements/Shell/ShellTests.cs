@@ -40,11 +40,14 @@ namespace Microsoft.Maui.DeviceTests
 					SetupShellHandlers(handlers);
 					handlers.AddHandler(typeof(NavigationPage), typeof(NavigationViewHandler));
 					handlers.AddHandler(typeof(Button), typeof(ButtonHandler));
+					handlers.AddHandler(typeof(Entry), typeof(EntryHandler));
+					handlers.AddHandler(typeof(Controls.ContentView), typeof(ContentViewHandler));
+					handlers.AddHandler(typeof(ScrollView), typeof(ScrollViewHandler));
 					handlers.AddHandler(typeof(CollectionView), typeof(CollectionViewHandler));
 				});
 			});
 		}
-
+#if !MACCATALYST
 		[Fact]
 		public async Task PageLayoutDoesNotExceedWindowBounds()
 		{
@@ -446,8 +449,10 @@ namespace Microsoft.Maui.DeviceTests
 		{
 			SetupBuilder();
 
-			var page1 = new ContentPage();
-			var page2 = new ContentPage();
+			var page1 = new ContentPage()
+				{ Content = new Label() { Text = "Page 1" }, Title = "Page 1" };
+			var page2 = new ContentPage()
+				{ Content = new Label() { Text = "Page 2" }, Title = "Page 2" };
 
 			var shell = await CreateShellAsync((shell) =>
 			{
@@ -787,6 +792,7 @@ namespace Microsoft.Maui.DeviceTests
 				};
 
 				Shell.SetBackButtonBehavior(secondPage, behavior);
+				await AssertionExtensions.Wait(() => !IsBackButtonVisible(shell.Handler));
 				Assert.False(IsBackButtonVisible(shell.Handler));
 				behavior.IsVisible = true;
 				NavigationPage.SetHasBackButton(shell.CurrentPage, true);
@@ -960,11 +966,7 @@ namespace Microsoft.Maui.DeviceTests
 		}
 #endif
 
-		[Fact(DisplayName = "Pages Do Not Leak"
-#if WINDOWS
-			,Skip = "Failing"
-#endif
-			)]
+		[Fact(DisplayName = "Pages Do Not Leak")]
 		public async Task PagesDoNotLeak()
 		{
 			SetupBuilder();
@@ -986,6 +988,8 @@ namespace Microsoft.Maui.DeviceTests
 					{
 						new Label(),
 						new Button(),
+						new Controls.ContentView(),
+						new ScrollView(),
 						new CollectionView(),
 					}
 				};
@@ -995,18 +999,51 @@ namespace Microsoft.Maui.DeviceTests
 				await shell.Navigation.PopAsync();
 			});
 
-			// As we add more controls to this test, more GCs will be required
-			for (int i = 0; i < 16; i++)
-			{
-				if (!pageReference.IsAlive)
-					break;
-				await Task.Yield();
-				GC.Collect();
-				GC.WaitForPendingFinalizers();
-			}
-
-			Assert.NotNull(pageReference);
+			await AssertionExtensions.WaitForGC(pageReference);
 			Assert.False(pageReference.IsAlive, "Page should not be alive!");
+		}
+
+		[Fact(DisplayName = "HideSoftInputOnTapped Doesnt Crash If Entry Is Still Focused After Window Is Null")]
+		public async Task HideSoftInputOnTappedDoesntCrashIfEntryIsStillFocusedAfterWindowIsNull()
+		{
+			SetupBuilder();
+
+			Entry entry1;
+			Entry entry2;
+
+			var rootPage = CreatePage(out entry1);
+			var nextPage = CreatePage(out entry2);
+
+			var shell = await CreateShellAsync(shell =>
+			{
+				shell.CurrentItem = rootPage;
+			});
+
+			await CreateHandlerAndAddToWindow<IWindowHandler>(shell, async (handler) =>
+			{
+				entry1.Focus();
+				await entry1.WaitForFocused();
+
+				await rootPage.Navigation.PushAsync(nextPage);
+				entry2.Focus();
+				await entry2.WaitForFocused();
+
+				await shell.GoToAsync("..", false);
+			});
+
+			ContentPage CreatePage(out Entry entry)
+			{
+				entry = new Entry();
+
+				return new ContentPage()
+				{
+					HideSoftInputOnTapped = true,
+					Content = new VerticalStackLayout()
+					{
+						entry
+					}
+				};
+			}
 		}
 
 		[Fact(DisplayName = "Can Reuse Pages")]
@@ -1028,6 +1065,68 @@ namespace Microsoft.Maui.DeviceTests
 				await shell.Navigation.PopAsync();
 				await shell.Navigation.PushAsync(reusedPage);
 				await OnLoadedAsync(reusedPage.Content);
+			});
+		}
+
+		[Fact(DisplayName = "Shell add then remove items from selected item")]
+		public async Task ShellAddRemoveItems()
+		{
+			FlyoutItem rootItem = null;
+			ShellItem homeItem = null;
+			int itemCount = 3;
+
+			SetupBuilder();
+			var shell = await CreateShellAsync((shell) =>
+			{
+				shell.FlyoutBehavior = FlyoutBehavior.Locked;
+				homeItem = new ShellContent()
+				{
+					Title = "Home",
+					Route = "MainPage",
+					Content = new ContentPage()
+				};
+				shell.Items.Add(homeItem);
+
+				rootItem = new FlyoutItem()
+				{
+					Title = "Items",
+					Route = "Items",
+					FlyoutDisplayOptions = FlyoutDisplayOptions.AsMultipleItems
+				};
+
+				for (int i = 0; i < itemCount; i++)
+				{
+					var shellContent = new ShellContent
+					{
+						Content = new ContentPage(),
+						Title = $"Item {i}",
+						Route = $"Item{i}"
+					};
+					rootItem.Items.Add(shellContent);
+				}
+				shell.Items.Add(rootItem);
+			});
+
+			await CreateHandlerAndAddToWindow<ShellHandler>(shell, async (handler) =>
+			{
+				rootItem.IsVisible = true;
+
+				shell.CurrentItem = rootItem.Items.Last();
+
+				// Wait for the rootItem to finish loading before we remove items.
+				// If we just start removing items directly after setting the current item
+				// This can cause the platform to crash since we're pulling the
+				// carpet out from under it while it's trying to load.
+				await OnLoadedAsync(shell.CurrentPage);
+
+				// Remove all root child items
+				for (int i = 0; i < itemCount; i++)
+				{
+					rootItem.Items.RemoveAt(0);
+				}
+
+				shell.CurrentItem = homeItem;
+				Assert.True(shell.CurrentSection.Title == "Home");
 			});
 		}
 
@@ -1054,7 +1153,7 @@ namespace Microsoft.Maui.DeviceTests
 				Assert.Equal(count, appearanceObservers.Count); // Count doesn't increase
 			});
 		}
-
+#endif
 		protected Task<Shell> CreateShellAsync(Action<Shell> action) =>
 			InvokeOnMainThreadAsync(() =>
 			{

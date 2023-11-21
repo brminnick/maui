@@ -17,8 +17,7 @@ namespace Microsoft.Maui.Platform
 		{
 			return new ContentView
 			{
-				CrossPlatformArrange = ((IContentView)view).CrossPlatformArrange,
-				CrossPlatformMeasure = ((IContentView)view).CrossPlatformMeasure
+				CrossPlatformLayout = ((IContentView)view)
 			};
 		}
 
@@ -32,7 +31,9 @@ namespace Microsoft.Maui.Platform
 				application?.ThemeChanged();
 			}
 
+#pragma warning disable CA1422 // Validate platform compatibility
 			base.TraitCollectionDidChange(previousTraitCollection);
+#pragma warning restore CA1422 // Validate platform compatibility
 		}
 	}
 }

@@ -12,6 +12,7 @@ namespace Microsoft.Maui.Controls.Handlers
 		public static PropertyMapper<ShellSection, ShellSectionHandler> Mapper =
 				new PropertyMapper<ShellSection, ShellSectionHandler>(ElementMapper)
 				{
+					[nameof(ShellSection.Title)] = MapTitle,
 					[nameof(ShellSection.CurrentItem)] = MapCurrentItem,
 				};
 
@@ -33,6 +34,12 @@ namespace Microsoft.Maui.Controls.Handlers
 		{
 			_navigationManager = CreateNavigationManager();
 			return new WFrame();
+		}
+		public static void MapTitle(ShellSectionHandler handler, ShellSection item)
+		{
+			var shellItem = item.Parent as ShellItem;
+			var shellItemHandler = shellItem?.Handler as ShellItemHandler;
+			shellItemHandler?.UpdateTitle();
 		}
 
 		public static void MapCurrentItem(ShellSectionHandler handler, ShellSection item)
@@ -94,8 +101,11 @@ namespace Microsoft.Maui.Controls.Handlers
 			// Current Item might transition to null while visibility is adjusting on shell
 			// so we just ignore this and eventually when shell knows
 			// the next current item it will request to sync again
-			if (VirtualView.CurrentItem == null)
+			if (VirtualView.CurrentItem == null || MauiContext is null)
 				return;
+
+			// This is used to assign the ShellContentHandler to ShellContent
+			_ = VirtualView.CurrentItem.ToPlatform(MauiContext);
 
 			List<IView> pageStack = new List<IView>()
 			{

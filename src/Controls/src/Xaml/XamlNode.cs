@@ -149,9 +149,9 @@ namespace Microsoft.Maui.Controls.Xaml
 
 			if (!SkipChildren(visitor, this, parentNode))
 			{
-				foreach (var node in Properties.Values.ToList())
+				foreach (var node in Properties.Values.ToArray())
 					node.Accept(visitor, this);
-				foreach (var node in CollectionItems)
+				foreach (var node in CollectionItems.ToArray())
 					node.Accept(visitor, this);
 			}
 
@@ -208,7 +208,7 @@ namespace Microsoft.Maui.Controls.Xaml
 			{
 				foreach (var node in Properties.Values.ToList())
 					node.Accept(visitor, this);
-				foreach (var node in CollectionItems)
+				foreach (var node in CollectionItems.ToList())
 					node.Accept(visitor, this);
 			}
 

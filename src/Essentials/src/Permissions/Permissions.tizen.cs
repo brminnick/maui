@@ -1,3 +1,4 @@
+#pragma warning disable CS0618 // Type or member is obsolete
 using System.Linq;
 using System.Threading.Tasks;
 using Tizen.Security;
@@ -185,6 +186,10 @@ namespace Microsoft.Maui.ApplicationModel
 			/// <inheritdoc/>
 			public override (string tizenPrivilege, bool isRuntime)[] RequiredPrivileges =>
 				new[] { ("http://tizen.org/privilege/recorder", false) };
+		}
+
+		public partial class NearbyWifiDevices : BasePlatformPermission
+		{
 		}
 
 		public partial class NetworkState : BasePlatformPermission

@@ -1,7 +1,4 @@
-using System;
-using System.Collections.Generic;
-using UIKit;
-
+﻿using System;
 
 namespace Microsoft.Maui.Handlers
 {
@@ -24,14 +21,20 @@ namespace Microsoft.Maui.Handlers
 			throw new InvalidOperationException($"PageViewController.View must be a {nameof(ContentView)}");
 		}
 
+		public static void MapBackground(IPageHandler handler, IContentView page)
+		{
+			if (handler is IPlatformViewHandler platformViewHandler && platformViewHandler.ViewController is not null)
+			{
+				var provider = handler.GetRequiredService<IImageSourceServiceProvider>();
+				platformViewHandler.ViewController.View?.UpdateBackground(page, provider);
+			}
+		}
+
 		public static void MapTitle(IPageHandler handler, IContentView page)
 		{
-			if (handler is IPlatformViewHandler invh && invh.ViewController != null)
+			if (handler is IPlatformViewHandler platformViewHandler && platformViewHandler.ViewController is not null)
 			{
-				if (page is ITitledElement titled)
-				{
-					invh.ViewController.Title = titled.Title;
-				}
+				platformViewHandler.ViewController.UpdateTitle(page);
 			}
 		}
 	}

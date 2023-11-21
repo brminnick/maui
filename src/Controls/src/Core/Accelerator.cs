@@ -1,4 +1,4 @@
-#nullable disable
+﻿#nullable disable
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -7,6 +7,7 @@ namespace Microsoft.Maui.Controls
 {
 	/// <include file="../../docs/Microsoft.Maui.Controls/Accelerator.xml" path="Type[@FullName='Microsoft.Maui.Controls.Accelerator']/Docs/*" />
 	[System.ComponentModel.TypeConverter(typeof(AcceleratorTypeConverter))]
+	[Obsolete("Use KeyboardAccelerator instead.")]
 	public class Accelerator
 	{
 		const char Separator = '+';

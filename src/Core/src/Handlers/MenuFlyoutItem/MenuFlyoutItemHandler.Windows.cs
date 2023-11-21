@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using Microsoft.UI.Xaml.Controls;
+﻿using Microsoft.UI.Xaml.Controls;
 
 namespace Microsoft.Maui.Handlers
 {
@@ -38,6 +35,16 @@ namespace Microsoft.Maui.Handlers
 		public static void MapText(IMenuFlyoutItemHandler handler, IMenuFlyoutItem view)
 		{
 			handler.PlatformView.Text = view.Text;
+		}
+
+		/// <summary>
+		///	Maps keyboard accelerator to the Windows platform control.
+		/// </summary>
+		/// <param name="handler">The handler, of type <see cref="IMenuFlyoutItemHandler"/>.</param>
+		/// <param name="view">The view, of type <see cref="IMenuFlyoutItem"/>.</param>
+		public static void MapKeyboardAccelerators(IMenuFlyoutItemHandler handler, IMenuFlyoutItem view)
+		{
+			handler.PlatformView.UpdateKeyboardAccelerators(view);
 		}
 
 		public static void MapIsEnabled(IMenuFlyoutItemHandler handler, IMenuFlyoutItem view) =>

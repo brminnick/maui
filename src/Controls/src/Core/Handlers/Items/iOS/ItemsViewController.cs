@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 using CoreGraphics;
 using Foundation;
 using Microsoft.Maui.Controls.Internals;
@@ -15,15 +16,17 @@ namespace Microsoft.Maui.Controls.Handlers.Items
 	where TItemsView : ItemsView
 	{
 		public const int EmptyTag = 333;
+		readonly WeakReference<TItemsView> _itemsView;
 
 		public IItemsViewSource ItemsSource { get; protected set; }
-		public TItemsView ItemsView { get; }
+		public TItemsView ItemsView => _itemsView.GetTargetOrDefault();
 
 		// ItemsViewLayout provides an accessor to the typed UICollectionViewLayout. It's also important to note that the
 		// initial UICollectionViewLayout which is passed in to the ItemsViewController (and accessed via the Layout property)
 		// _does not_ get updated when the layout is updated for the CollectionView. That property only refers to the
 		// original layout. So it's unlikely that you would ever want to use .Layout; use .ItemsViewLayout instead.
 		// See https://developer.apple.com/documentation/uikit/uicollectionviewcontroller/1623980-collectionviewlayout
+		[UnconditionalSuppressMessage("Memory", "MEM0002", Justification = "Proven safe in test: MemoryTests.HandlerDoesNotLeak")]
 		protected ItemsViewLayout ItemsViewLayout { get; set; }
 
 		bool _initialized;
@@ -31,19 +34,22 @@ namespace Microsoft.Maui.Controls.Handlers.Items
 		bool _emptyViewDisplayed;
 		bool _disposed;
 
+		[UnconditionalSuppressMessage("Memory", "MEM0002", Justification = "Proven safe in test: MemoryTests.HandlerDoesNotLeak")]
 		Func<UICollectionViewCell> _getPrototype;
 		CGSize _previousContentSize = CGSize.Empty;
 
+		[UnconditionalSuppressMessage("Memory", "MEM0002", Justification = "Proven safe in test: MemoryTests.HandlerDoesNotLeak")]
 		UIView _emptyUIView;
 		VisualElement _emptyViewFormsElement;
 		Dictionary<object, TemplatedCell> _measurementCells = new Dictionary<object, TemplatedCell>();
 		List<string> _cellReuseIds = new List<string>();
 
+		[UnconditionalSuppressMessage("Memory", "MEM0002", Justification = "Proven safe in test: MemoryTests.HandlerDoesNotLeak")]
 		protected UICollectionViewDelegateFlowLayout Delegator { get; set; }
 
 		protected ItemsViewController(TItemsView itemsView, ItemsViewLayout layout) : base(layout)
 		{
-			ItemsView = itemsView;
+			_itemsView = new(itemsView);
 			ItemsViewLayout = layout;
 		}
 
@@ -185,16 +191,27 @@ namespace Microsoft.Maui.Controls.Handlers.Items
 
 		void InvalidateMeasureIfContentSizeChanged()
 		{
-			var contentSize = CollectionView.CollectionViewLayout.CollectionViewContentSize;
+			var contentSize = CollectionView?.CollectionViewLayout?.CollectionViewContentSize;
 
-			bool widthChanged = _previousContentSize.Width != contentSize.Width;
-			bool heightChanged = _previousContentSize.Height != contentSize.Height;
+			if (!contentSize.HasValue)
+			{
+				return;
+			}
+
+			bool widthChanged = _previousContentSize.Width != contentSize.Value.Width;
+			bool heightChanged = _previousContentSize.Height != contentSize.Value.Height;
 
 			if (_initialized && (widthChanged || heightChanged))
 			{
-				var screenFrame = CollectionView.Window.Frame;
-				var screenWidth = screenFrame.Width;
-				var screenHeight = screenFrame.Height;
+				var screenFrame = CollectionView?.Window?.Frame;
+
+				if (!screenFrame.HasValue)
+				{
+					return;
+				}
+
+				var screenWidth = screenFrame.Value.Width;
+				var screenHeight = screenFrame.Value.Height;
 				bool invalidate = false;
 
 				// If both the previous content size and the current content size are larger
@@ -205,23 +222,23 @@ namespace Microsoft.Maui.Controls.Handlers.Items
 				// If either size is smaller than that, we need to invalidate to ensure that the 
 				// CollectionView is re-measured and set to the correct size.
 
-				if (widthChanged && (contentSize.Width < screenWidth || _previousContentSize.Width < screenWidth))
+				if (widthChanged && (contentSize.Value.Width < screenWidth || _previousContentSize.Width < screenWidth))
 				{
 					invalidate = true;
 				}
 
-				if (heightChanged && (contentSize.Height < screenHeight || _previousContentSize.Height < screenHeight))
+				if (heightChanged && (contentSize.Value.Height < screenHeight || _previousContentSize.Height < screenHeight))
 				{
 					invalidate = true;
 				}
 
 				if (invalidate)
 				{
-					(ItemsView as IView).InvalidateMeasure();
+					(ItemsView as IView)?.InvalidateMeasure();
 				}
 			}
 
-			_previousContentSize = contentSize;
+			_previousContentSize = contentSize.Value;
 		}
 
 		internal Size? GetSize()
@@ -357,6 +374,7 @@ namespace Microsoft.Maui.Controls.Handlers.Items
 			return ItemsSource[index];
 		}
 
+		[UnconditionalSuppressMessage("Memory", "MEM0003", Justification = "Proven safe in test: MemoryTests.HandlerDoesNotLeak")]
 		void CellContentSizeChanged(object sender, EventArgs e)
 		{
 			if (_disposed)
@@ -379,6 +397,7 @@ namespace Microsoft.Maui.Controls.Handlers.Items
 			}
 		}
 
+		[UnconditionalSuppressMessage("Memory", "MEM0003", Justification = "Proven safe in test: MemoryTests.HandlerDoesNotLeak")]
 		void CellLayoutAttributesChanged(object sender, LayoutAttributesChangedEventArgs args)
 		{
 			CacheCellAttributes(args.NewAttributes.IndexPath, args.NewAttributes.Size);
