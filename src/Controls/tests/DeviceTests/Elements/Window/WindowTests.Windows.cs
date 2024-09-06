@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Maui.Controls;
@@ -9,6 +10,7 @@ using Microsoft.Maui.Handlers;
 using Microsoft.Maui.Platform;
 using Microsoft.UI.Windowing;
 using Xunit;
+using static Microsoft.Maui.DeviceTests.AssertHelpers;
 using WPanel = Microsoft.UI.Xaml.Controls.Panel;
 
 namespace Microsoft.Maui.DeviceTests
@@ -42,6 +44,35 @@ namespace Microsoft.Maui.DeviceTests
 				Assert.Equal(mainWindow.Page, mainPage);
 
 				Assert.NotNull(mainWindow.Page);
+			});
+		}
+
+		[Fact(DisplayName = "MauiWinUIWindow doesn't leak")]
+		public async Task MauiWinUIWindowDoesntLeak()
+		{
+			List<WeakReference> weakReferences = new();
+
+			SetupBuilder();
+
+			var mainPage = new NavigationPage(new ContentPage());
+
+			await CreateHandlerAndAddToWindow<IWindowHandler>(mainPage, async (handler) =>
+			{
+				for (int i = 0; i < 3; i++)
+				{
+					var window = new MauiWinUIWindow();
+					weakReferences.Add(new WeakReference(window));
+
+					window.Activate();
+					await Task.Delay(100);
+					window.Close();
+				}
+
+				GC.Collect();
+				GC.WaitForPendingFinalizers();
+				GC.WaitForFullGCComplete();
+
+				Assert.True(weakReferences.Count(r => r.IsAlive) == 0);
 			});
 		}
 
@@ -114,7 +145,7 @@ namespace Microsoft.Maui.DeviceTests
 				var mauiToolBar = GetPlatformToolbar(handler);
 
 				Assert.NotNull(mauiToolBar);
-				Assert.True(await AssertionExtensions.Wait(() => mauiToolBar.GetLocationOnScreen().Value.Y > 0));
+				await AssertEventually(() => mauiToolBar.GetLocationOnScreen().Value.Y > 0);
 
 				var position = mauiToolBar.GetLocationOnScreen();
 				var appTitleBarHeight = GetWindowRootView(handler).AppTitleBarActualHeight;
@@ -155,13 +186,13 @@ namespace Microsoft.Maui.DeviceTests
 				presenter.Maximize();
 
 				// Wait for maximize animation to finish
-				Assert.True(await AssertionExtensions.Wait(() => mauiToolBar.GetLocationOnScreen().Value.Y == 0));
+				await AssertEventually(() => mauiToolBar.GetLocationOnScreen().Value.Y == 0);
 
 				// Now restore the window
 				presenter.SetBorderAndTitleBar(true, true);
 				presenter.Restore();
 
-				Assert.True(await AssertionExtensions.Wait(() => mauiToolBar.GetLocationOnScreen().Value.Y == 32));
+				await AssertEventually(() => mauiToolBar.GetLocationOnScreen().Value.Y == 32);
 			});
 		}
 
@@ -191,7 +222,7 @@ namespace Microsoft.Maui.DeviceTests
 							var mauiToolBar = GetPlatformToolbar(handler);
 
 							Assert.NotNull(mauiToolBar);
-							Assert.True(await AssertionExtensions.Wait(() => mauiToolBar.GetLocationOnScreen().Value.Y > 0));
+							await AssertEventually(() => mauiToolBar.GetLocationOnScreen().Value.Y > 0);
 
 							var position = mauiToolBar.GetLocationOnScreen();
 							var appTitleBarHeight = GetWindowRootView(handler).AppTitleBarActualHeight;

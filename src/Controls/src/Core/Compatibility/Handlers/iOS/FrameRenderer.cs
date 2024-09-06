@@ -115,8 +115,11 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 				if (backgroundLayer != null)
 				{
 					_actualView.Layer.BackgroundColor = UIColor.Clear.CGColor;
-					Layer.InsertBackgroundLayer(backgroundLayer, 0);
+
+					backgroundLayer.BackgroundColor = ColorExtensions.BackgroundColor.CGColor;
 					backgroundLayer.CornerRadius = cornerRadius;
+
+					Layer.InsertBackgroundLayer(backgroundLayer, 0);
 				}
 			}
 
@@ -204,7 +207,7 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 		public override void SetNeedsLayout()
 		{
 			base.SetNeedsLayout();
-			Superview?.SetNeedsLayout();
+			this.Superview?.SetNeedsLayout();
 		}
 
 		[Microsoft.Maui.Controls.Internals.Preserve(Conditional = true)]

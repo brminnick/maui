@@ -8,8 +8,26 @@ parameters:
   provisionatorChannel: 'latest'
   agentPoolAccessToken: ''
   configuration : "Release"
+  testFilter: ''
 
 steps:
+  - task: DownloadPipelineArtifact@2
+    condition: ne('${{ parameters.platform }}' , 'windows')
+    inputs:
+      artifact: ui-tests-samples
+
+  - task: DownloadPipelineArtifact@2
+    condition: eq('${{ parameters.platform }}' , 'windows')
+    inputs:
+      artifact: ui-tests-samples-windows
+  
+  - ${{ if eq(parameters.platform, 'ios')}}:
+    - bash: |
+        chmod +x $(System.DefaultWorkingDirectory)/eng/scripts/clean-bot.sh
+        $(System.DefaultWorkingDirectory)/eng/scripts/clean-bot.sh
+      displayName: 'Clean bot'
+      continueOnError: true
+      timeoutInMinutes: 60
 
   - template: provision.yml
     parameters:
@@ -17,7 +35,7 @@ steps:
       skipAndroidSdks: ${{ ne(parameters.platform, 'android') }}
       skipXcode: ${{ or(eq(parameters.platform, 'android'), eq(parameters.platform, 'windows')) }}
       provisionatorChannel: ${{ parameters.provisionatorChannel }}
-
+      
   - task: PowerShell@2
     condition: ne('${{ parameters.platform }}' , 'windows')
     inputs:
@@ -28,26 +46,7 @@ steps:
         defaults write -g NSAutomaticSpellingCorrectionEnabled -bool false
     displayName: "Modify defaults"
     continueOnError: true
-
-  # AzDO hosted agents default to 1024x768; set something bigger for Windows UI tests
-  - task: ScreenResolutionUtility@1
-    condition: eq('${{ parameters.platform }}' , 'windows')
-    inputs:
-      displaySettings: 'specific'
-      width: '1920'
-      height: '1080'
-    displayName: "Set screen resolution"
-
-  - task: NodeTool@0
-    inputs:
-      versionSpec: "20.3.1"
-    displayName: "Install node"
-
-  - pwsh: ./eng/scripts/appium-install.ps1
-    displayName: "Install Appium"
-    continueOnError: false
-    retryCountOnTaskFailure: 1
-
+  
   - pwsh: ./build.ps1 --target=dotnet --configuration="${{ parameters.configuration }}" --verbosity=diagnostic
     displayName: 'Install .NET'
     retryCountOnTaskFailure: 2
@@ -58,16 +57,61 @@ steps:
   - pwsh: echo "##vso[task.prependpath]$(DotNet.Dir)"
     displayName: 'Add .NET to PATH'
 
-  - pwsh: ./build.ps1 --target=dotnet-buildtasks --configuration="${{ parameters.configuration }}"
-    displayName: 'Build the MSBuild Tasks'
+  # AzDO hosted agents default to 1024x768; set something bigger for Windows UI tests
+  - task: ScreenResolutionUtility@1
+    condition: eq('${{ parameters.platform }}' , 'windows')
+    inputs:
+      displaySettings: 'specific'
+      width: '1920'
+      height: '1080'
+    displayName: "Set screen resolution"
 
-  - pwsh: ./build.ps1 --target=dotnet-samples --configuration="${{ parameters.configuration }}" --${{ parameters.platform }} --verbosity=diagnostic --usenuget=false
-    displayName: 'Build the samples'
+  - task: UseNode@1
+    inputs:
+      version: "20.3.1"
+    displayName: "Install node"
 
-  - pwsh: ./build.ps1 -Script eng/devices/${{ parameters.platform }}.cake --target=uitest --project="${{ parameters.path }}" --appproject="${{ parameters.app }}" --device="${{ parameters.device }}" --apiversion="${{ parameters.version }}" --configuration="${{ parameters.configuration }}" --results="$(TestResultsDirectory)" --binlog="$(LogDirectory)" ${{ parameters.cakeArgs }} --verbosity=diagnostic
+  - pwsh: |
+      $fullLogsDir = Join-Path "$(LogDirectory)" "npm"
+      ./eng/scripts/appium-install.ps1 -logsDir "$fullLogsDir"
+      Dir -Recurse $(APPIUM_HOME) | Get-Childitem | Select Fullname
+    displayName: "Install Appium (Drivers)"
+    continueOnError: false
+    retryCountOnTaskFailure: 1
+    env:
+      APPIUM_HOME: $(APPIUM_HOME)
+
+  - pwsh: |
+      $command = "./build.ps1 -Script eng/devices/${{ parameters.platform }}.cake --target=uitest --project=""${{ parameters.path }}"""
+      $command += " --appproject=""${{ parameters.app }}"" --device=""${{ parameters.device }}"" --apiversion=""${{ parameters.version }}"" --configuration=""${{ parameters.configuration }}"""
+      $command += " --results=""$(TestResultsDirectory)"" --binlog=""$(LogDirectory)"" ${{ parameters.cakeArgs }} --verbosity=diagnostic"
+      
+      $testFilter = ""
+
+      "${{ parameters.testFilter }}".Split(",") | ForEach {
+        $testFilter += "TestCategory=" + $_ + "|"
+      }
+
+      $testFilter = $testFilter.TrimEnd("|")
+
+      # Cake does not allow empty parameters, so check if our filter is empty before adding it
+      if ($testFilter) {
+        $command += " --test-filter ""$testFilter"""
+      }
+
+      Invoke-Expression $command  
     displayName: $(Agent.JobName)
-    retryCountOnTaskFailure: 2
-  
+    ${{ if ne(parameters.platform, 'android')}}:
+      retryCountOnTaskFailure: 1
+    env:
+      APPIUM_HOME: $(APPIUM_HOME)
+
+  - bash: |
+      pwsh ./build.ps1 --target=Cleanup -Script eng/devices/${{ parameters.platform }}.cake ---results="$(TestResultsDirectory)" ${{ parameters.cakeArgs }}
+    displayName: Cleanup and Create Simulator Logs if Test Run Failed To
+    condition: ${{ eq(parameters.platform, 'ios') }}
+    continueOnError: true
+
   - task: PublishTestResults@2
     displayName: Publish the $(System.PhaseName) test results
     condition: always()

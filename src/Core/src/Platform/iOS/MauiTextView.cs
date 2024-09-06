@@ -10,7 +10,7 @@ namespace Microsoft.Maui.Platform
 {
 	public class MauiTextView : UITextView, IUIViewLifeCycleEvents
 	{
-		[UnconditionalSuppressMessage("Memory", "MA0002", Justification = "Proven safe in test: MemoryTests.HandlerDoesNotLeak")]
+		[UnconditionalSuppressMessage("Memory", "MEM0002", Justification = "Proven safe in test: MemoryTests.HandlerDoesNotLeak")]
 		readonly MauiLabel _placeholderLabel;
 		nfloat? _defaultPlaceholderSize;
 
@@ -37,7 +37,7 @@ namespace Microsoft.Maui.Platform
 		// Native Changed doesn't fire when the Text Property is set in code
 		// We use this event as a way to fire changes whenever the Text changes
 		// via code or user interaction.
-		[UnconditionalSuppressMessage("Memory", "MA0001", Justification = "Proven safe in test: MemoryTests.HandlerDoesNotLeak")]
+		[UnconditionalSuppressMessage("Memory", "MEM0001", Justification = "Proven safe in test: MemoryTests.HandlerDoesNotLeak")]
 		public event EventHandler? TextSetOrChanged;
 
 		public string? PlaceholderText
@@ -91,7 +91,7 @@ namespace Microsoft.Maui.Platform
 			set
 			{
 				base.Font = value;
-				UpdatePlaceholderFontSize(value);
+				UpdatePlaceholderFont(value);
 
 			}
 		}
@@ -175,14 +175,14 @@ namespace Microsoft.Maui.Platform
 			};
 		}
 
-		void UpdatePlaceholderFontSize(UIFont? value)
+		void UpdatePlaceholderFont(UIFont? value)
 		{
 			_defaultPlaceholderSize ??= _placeholderLabel.Font.PointSize;
-			_placeholderLabel.Font = _placeholderLabel.Font.WithSize(
+			_placeholderLabel.Font = value ?? _placeholderLabel.Font.WithSize(
 				value?.PointSize ?? _defaultPlaceholderSize.Value);
 		}
 
-		[UnconditionalSuppressMessage("Memory", "MA0002", Justification = IUIViewLifeCycleEvents.UnconditionalSuppressMessage)]
+		[UnconditionalSuppressMessage("Memory", "MEM0002", Justification = IUIViewLifeCycleEvents.UnconditionalSuppressMessage)]
 		EventHandler? _movedToWindow;
 		event EventHandler IUIViewLifeCycleEvents.MovedToWindow
 		{

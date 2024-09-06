@@ -32,6 +32,9 @@ namespace Microsoft.Maui.Platform
 
 		protected CGRect AdjustForSafeArea(CGRect bounds)
 		{
+			if (KeyboardAutoManagerScroll.ShouldIgnoreSafeAreaAdjustment)
+				KeyboardAutoManagerScroll.ShouldScrollAgain = true;
+
 			if (View is not ISafeAreaView sav || sav.IgnoreSafeArea || !RespondsToSafeArea())
 			{
 				return bounds;
@@ -137,7 +140,7 @@ namespace Microsoft.Maui.Platform
 		{
 			InvalidateConstraintsCache();
 			base.SetNeedsLayout();
-			Superview?.SetNeedsLayout();
+			this.Superview?.SetNeedsLayout();
 		}
 
 		IVisualTreeElement? IVisualTreeElementProvidable.GetElement()
@@ -158,7 +161,7 @@ namespace Microsoft.Maui.Platform
 			return null;
 		}
 
-		[UnconditionalSuppressMessage("Memory", "MA0002", Justification = IUIViewLifeCycleEvents.UnconditionalSuppressMessage)]
+		[UnconditionalSuppressMessage("Memory", "MEM0002", Justification = IUIViewLifeCycleEvents.UnconditionalSuppressMessage)]
 		EventHandler? _movedToWindow;
 		event EventHandler? IUIViewLifeCycleEvents.MovedToWindow
 		{

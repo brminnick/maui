@@ -5,6 +5,7 @@ parameters:
   windowsPool: { }
   androidApiLevels: [ 33 ]
   iosVersions: [ 'latest' ]
+  iosDeviceVersions: [ '15' ]
   catalystVersions: [ 'latest' ]
   provisionatorChannel: 'latest'
   agentPoolAccessToken: ''
@@ -29,6 +30,7 @@ stages:
         clean: all
       displayName: "Android emulator tests"
       pool: ${{ parameters.androidPool }}
+      timeoutInMinutes: 60
       strategy:
         matrix:
           # create all the variables used for the matrix
@@ -41,14 +43,17 @@ stages:
                     PROJECT_PATH: ${{ project.android }}
                     ${{ if eq(api, 27) }}:
                       DEVICE: android-emulator-32_${{ api }}
+                      APIVERSION: ${{ api }}
                     ${{ if not(eq(api, 27)) }}:
                       DEVICE: android-emulator-64_${{ api }}
+                      APIVERSION: ${{ api }}
       steps:
         - template: device-tests-steps.yml
           parameters:
             platform: android
             path: $(PROJECT_PATH) 
             device: $(DEVICE)
+            apiVersion: $(APIVERSION)
             windowsPackageId: android # Only needed for Windows, will be ignored
             provisionatorChannel: ${{ parameters.provisionatorChannel }}
             agentPoolAccessToken: ${{ parameters.agentPoolAccessToken }}
@@ -56,6 +61,7 @@ stages:
             artifactItemPattern: ${{ parameters.artifactItemPattern }}
             checkoutDirectory: ${{ parameters.checkoutDirectory }}
             useArtifacts: ${{ parameters.useArtifacts }}
+            poolName: ${{ parameters.androidPool.name }}
 
   - stage: ios_device_tests
     displayName: iOS Device Tests
@@ -64,8 +70,9 @@ stages:
     - job: ios_device_tests
       workspace:
         clean: all
-      displayName: "iOS simulator tests"
+      displayName: "iOS tests"
       pool: ${{ parameters.iosPool }}
+      timeoutInMinutes: 120
       strategy:
         matrix:
           # create all the variables used for the matrix
@@ -76,16 +83,19 @@ stages:
                   ${{ replace(coalesce(project.desc, project.name), ' ', '_') }}_V_${{ version }}:
                     REQUIRED_XCODE: $(DEVICETESTS_REQUIRED_XCODE)
                     PROJECT_PATH: ${{ project.ios }}
-                    ${{ if eq(version, 'latest') }}:
-                      DEVICE: ios-simulator-64
+                    ${{ if contains(version, 'device') }}:
+                      DEVICE: ios-device
+                      APIVERSION: ${{ replace(version, 'device-', '') }}
                     ${{ else }}:
-                      DEVICE: ios-simulator-64_${{ version }}
+                      DEVICE: ios-simulator-64_${{ replace(version, 'simulator-', '') }}
+                      APIVERSION: ${{ replace(version, 'simulator-', '') }}
       steps:
         - template: device-tests-steps.yml
           parameters:
             platform: ios
             path: $(PROJECT_PATH)
             device: $(DEVICE)
+            apiVersion: $(APIVERSION)
             windowsPackageId: ios # Only needed for Windows, will be ignored
             provisionatorChannel: ${{ parameters.provisionatorChannel }}
             agentPoolAccessToken: ${{ parameters.agentPoolAccessToken }}
@@ -93,6 +103,7 @@ stages:
             artifactItemPattern: ${{ parameters.artifactItemPattern }}
             checkoutDirectory: ${{ parameters.checkoutDirectory }}
             useArtifacts: ${{ parameters.useArtifacts }}
+            poolName: 'Azure Pipelines'
 
   - stage: catalyst_device_tests
     displayName: macOS Device Tests
@@ -103,6 +114,7 @@ stages:
         clean: all
       displayName: "macOS tests"
       pool: ${{ parameters.catalystPool }}
+      timeoutInMinutes: 240
       strategy:
         matrix:
           # create all the variables used for the matrix
@@ -123,6 +135,7 @@ stages:
             platform: catalyst
             path: $(PROJECT_PATH)
             device: $(DEVICE)
+            apiVersion: macos # Only needed for iOS, will be ignored
             windowsPackageId: catalyst # Only needed for Windows, will be ignored
             provisionatorChannel: ${{ parameters.provisionatorChannel }}
             agentPoolAccessToken: ${{ parameters.agentPoolAccessToken }}
@@ -130,6 +143,8 @@ stages:
             artifactItemPattern: ${{ parameters.artifactItemPattern }}
             checkoutDirectory: ${{ parameters.checkoutDirectory }}
             useArtifacts: ${{ parameters.useArtifacts }}
+            poolName: 'Azure Pipelines'
+
 
   - stage: windows_device_tests
     displayName: Windows Device Tests
@@ -140,6 +155,7 @@ stages:
         clean: all
       displayName: "Windows device tests"
       pool: ${{ parameters.windowsPool }}
+      timeoutInMinutes: 240 # how long to run the job before automatically cancelling
       strategy:
         matrix:
           # create all the variables used for the matrix
@@ -155,6 +171,7 @@ stages:
           parameters:
             platform: windows
             path: $(PROJECT_PATH)
+            apiVersion: 10.0.19041.0
             windowsPackageId: $(PACKAGE_ID)
             device: $(DEVICE) # For Windows this switches between packaged and unpackaged
             provisionatorChannel: ${{ parameters.provisionatorChannel }}

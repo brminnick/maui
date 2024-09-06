@@ -1,5 +1,6 @@
 ﻿#nullable enable
 using System;
+using System.Diagnostics.CodeAnalysis;
 using CoreAnimation;
 using CoreGraphics;
 using Microsoft.Maui.Graphics;
@@ -12,7 +13,7 @@ namespace Microsoft.Maui.Platform
 	public class MauiCALayer : CALayer
 	{
 		CGRect _bounds;
-
+		[UnconditionalSuppressMessage("Memory", "MEM0002", Justification = "IShape is a non-NSObject in MAUI.")]
 		IShape? _shape;
 
 		UIColor? _backgroundColor;
@@ -41,10 +42,17 @@ namespace Microsoft.Maui.Platform
 		{
 			base.LayoutSublayers();
 
-			if (Bounds.Equals(_bounds))
-				return;
+			// If the super layer's frame is zero, indicating an off-screen rendering scenario, 
+			// the bounds are intentionally kept at zero to avoid incorrect initial drawing 
+			// caused by bounds matching the screen size.
+			var bounds = SuperLayer?.Frame == CGRect.Empty ? CGRect.Empty : Bounds;
 
-			_bounds = new CGRect(Bounds.Location, Bounds.Size);
+			if (bounds.Equals(_bounds))
+			{
+				return;
+			}
+
+			_bounds = new CGRect(bounds.Location, bounds.Size);
 		}
 
 		public override void DrawInContext(CGContext ctx)

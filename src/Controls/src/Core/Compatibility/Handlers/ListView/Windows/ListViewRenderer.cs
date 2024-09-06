@@ -57,7 +57,7 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 			AutoPackage = false;
 		}
 
-		internal class ListViewTransparent : WListView
+		internal sealed class ListViewTransparent : WListView
 		{
 			internal ListViewRenderer ListViewRenderer { get; }
 			public ListViewTransparent(ListViewRenderer listViewRenderer) : base()
@@ -260,8 +260,6 @@ namespace Microsoft.Maui.Controls.Handlers.Compatibility
 				ClearSizeEstimate();
 				ReloadData();
 			}
-
-			Element.Dispatcher.DispatchIfRequired(() => List?.UpdateLayout());
 		}
 
 		protected override void OnElementPropertyChanged(object sender, PropertyChangedEventArgs e)
