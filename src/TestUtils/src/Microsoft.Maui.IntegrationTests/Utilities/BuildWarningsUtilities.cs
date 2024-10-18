@@ -475,7 +475,7 @@ namespace Microsoft.Maui.IntegrationTests
 							"Microsoft.Maui.Controls.Xaml.Internals.XamlServiceProvider.XamlServiceProvider(INode,HydrationContext): Using member 'Microsoft.Maui.Controls.Xaml.Internals.XamlDataTypeProvider.XamlDataTypeProvider(IElementNode,HydrationContext)' which has 'RequiresDynamicCodeAttribute' can break functionality when AOT compiling. XamlDataTypeProvider is not trim and AOT-compatible.",
 						}
 					},
-					
+
 				}
 			},
 		};

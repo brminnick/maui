@@ -26,9 +26,10 @@ namespace Microsoft.Maui.Controls
 			if (_first is null || _first.Value.Key == specificity)
 			{
 				_first = new KeyValuePair<SetterSpecificity, object>(specificity, value);
-				lock(_lock) {
+				lock (_lock)
+				{
 					if (_values is not null)
-							_values[specificity] = value;
+						_values[specificity] = value;
 				}
 				return;
 			}
@@ -36,14 +37,16 @@ namespace Microsoft.Maui.Controls
 			if (_second is null || _second.Value.Key == specificity)
 			{
 				_second = new KeyValuePair<SetterSpecificity, object>(specificity, value);
-				lock(_lock) {
-					if (_values is not null)	
+				lock (_lock)
+				{
+					if (_values is not null)
 						_values[specificity] = value;
 				}
 				return;
 			}
 
-			lock(_lock) {
+			lock (_lock)
+			{
 				if (_values is null)
 				{
 					_values = new()
@@ -55,14 +58,14 @@ namespace Microsoft.Maui.Controls
 					_first = null;
 					_second = null;
 				}
-			
+
 				_values[specificity] = value;
 			}
 		}
 
 		public void Remove(SetterSpecificity specificity)
 		{
-			lock(_lock)
+			lock (_lock)
 			{
 				if (_values is not null)
 					_values.Remove(specificity);
@@ -76,8 +79,10 @@ namespace Microsoft.Maui.Controls
 		public KeyValuePair<SetterSpecificity, object> GetSpecificityAndValue()
 		{
 			// Slow path calls SortedList.Last()
-			lock(_lock) {
-				if (_values is not null) {
+			lock (_lock)
+			{
+				if (_values is not null)
+				{
 					return _values.Last();
 				}
 			}
@@ -110,7 +115,8 @@ namespace Microsoft.Maui.Controls
 		/// </summary>
 		public object? GetClearedValue(SetterSpecificity clearedSpecificity)
 		{
-			lock(_lock) {
+			lock (_lock)
+			{
 				if (_values is not null)
 				{
 					var index = _values.IndexOfKey(clearedSpecificity);
