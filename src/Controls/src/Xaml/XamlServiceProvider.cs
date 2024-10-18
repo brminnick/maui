@@ -277,7 +277,7 @@ namespace Microsoft.Maui.Controls.Xaml.Internals
 		public XamlDataTypeProvider(IElementNode node, HydrationContext context)
 		{
 			Context = context;
-			
+
 
 			static IElementNode GetParent(IElementNode node)
 			{
@@ -291,7 +291,7 @@ namespace Microsoft.Maui.Controls.Xaml.Internals
 
 			static bool IsBindingContextBinding(IElementNode node)
 			{
-				if (   ApplyPropertiesVisitor.TryGetPropertyName(node, node.Parent, out XmlName name)
+				if (ApplyPropertiesVisitor.TryGetPropertyName(node, node.Parent, out XmlName name)
 					&& name.NamespaceURI == ""
 					&& name.LocalName == nameof(BindableObject.BindingContext))
 					return true;
@@ -300,15 +300,15 @@ namespace Microsoft.Maui.Controls.Xaml.Internals
 
 			static bool IsBindingBaseProperty(IElementNode node, HydrationContext context)
 			{
-				if (   ApplyPropertiesVisitor.TryGetPropertyName(node, node.Parent, out XmlName name)
+				if (ApplyPropertiesVisitor.TryGetPropertyName(node, node.Parent, out XmlName name)
 					&& node.Parent is IElementNode parent
-					&& XamlParser.GetElementType(parent.XmlType, 
-												 new XmlLineInfo(((IXmlLineInfo)node).LineNumber, ((IXmlLineInfo)node).LinePosition), 
+					&& XamlParser.GetElementType(parent.XmlType,
+												 new XmlLineInfo(((IXmlLineInfo)node).LineNumber, ((IXmlLineInfo)node).LinePosition),
 												 context.RootElement.GetType().Assembly, out var xpe) is Type parentType
 					&& parentType.GetRuntimeProperties().FirstOrDefault(p => p.Name == name.LocalName) is PropertyInfo propertyInfo
 					&& propertyInfo.PropertyType == typeof(BindingBase))
-				{								
-						return true;
+				{
+					return true;
 				}
 				return false;
 			}
@@ -329,13 +329,13 @@ namespace Microsoft.Maui.Controls.Xaml.Internals
 
 			while (n != null)
 			{
-				
+
 				if (n != skipNode && n.Properties.TryGetValue(XmlName.xDataType, out dataTypeNode))
 				{
 					break;
 				}
 				if (IsBindingBaseProperty(n, context))
-				{					
+				{
 					break;
 				}
 				n = GetParent(n);
