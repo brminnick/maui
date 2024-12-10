@@ -1218,7 +1218,7 @@ namespace UITest.Appium
 			}
 
 			var response = app.CommandExecutor.Execute("getClipboardText", new Dictionary<string, object>());
-			
+
 			if (response?.Value != null)
 			{
 				return (string)response.Value;
@@ -1755,8 +1755,8 @@ namespace UITest.Appium
 			}
 
 			throw new InvalidOperationException($"Could not get the Android System Bars");
-    }
-    
+		}
+
 		/// <summary>
 		/// Navigates back in the application by simulating a tap on the platform-specific back navigation button.
 		/// </summary>
