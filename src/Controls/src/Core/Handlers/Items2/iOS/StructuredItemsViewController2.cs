@@ -48,6 +48,26 @@ namespace Microsoft.Maui.Controls.Handlers.Items2
 
 		protected override bool IsHorizontal => (ItemsView?.ItemsLayout as ItemsLayout)?.Orientation == ItemsLayoutOrientation.Horizontal;
 
+		internal void UpdateHeaderView()
+		{
+			// Clean up header view if no header content
+			if (ItemsView.Header is null && ItemsView.HeaderTemplate is null)
+			{
+				var headerView = CollectionView.ViewWithTag(HeaderTag);
+				headerView?.RemoveFromSuperview();
+			}
+		}
+
+		internal void UpdateFooterView()
+		{
+			// Clean up footer view if no footer content
+			if (ItemsView.Footer is null && ItemsView.FooterTemplate is null)
+			{
+				var footerView = CollectionView.ViewWithTag(FooterTag);
+				footerView?.RemoveFromSuperview();
+			}
+		}
+
 		public override UICollectionReusableView GetViewForSupplementaryElement(UICollectionView collectionView, NSString elementKind, NSIndexPath indexPath)
 		{
 			// We don't have a header or footer, so we don't need to do anything
@@ -210,7 +230,7 @@ namespace Microsoft.Maui.Controls.Handlers.Items2
 			// We could then invalidate the layout for supplementary cell only `collectionView.IndexPathForCell(headerCell)` like we do on standard cells,
 			// but that causes other cells to oddly collapse (see Issue25362 UITest), so in this case we have to stick with `InvalidateLayout`.
 			var collectionView = CollectionView;
-			
+
 			if (ItemsView.Header is not null || ItemsView.HeaderTemplate is not null)
 			{
 				var visibleHeaders = collectionView.GetVisibleSupplementaryViews(UICollectionElementKindSectionKey.Header);

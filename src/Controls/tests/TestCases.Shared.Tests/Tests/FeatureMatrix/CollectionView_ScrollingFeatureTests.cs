@@ -4,6 +4,7 @@ using UITest.Core;
 
 
 namespace Microsoft.Maui.TestCases.Tests;
+
 public class CollectionView_ScrollingFeatureTests : UITest
 {
 	public const string ScrollingFeatureMatrix = "CollectionView Feature Matrix";
@@ -511,8 +512,8 @@ public class CollectionView_ScrollingFeatureTests : UITest
 #endif
 
 #if TEST_FAILS_ON_IOS && TEST_FAILS_ON_CATALYST && TEST_FAILS_ON_WINDOWS
-//Scroll mode "KeepLastItemInView" does not keep the last item at the end of the displayed list when adding new items Issue Link: https://github.com/dotnet/maui/issues/28716
-//KeepLastItemInView Does Not Scroll to Last Item When Adding Items at Top, Instead Scrolls to SecondLast Item : https://github.com/dotnet/maui/issues/29207
+	//Scroll mode "KeepLastItemInView" does not keep the last item at the end of the displayed list when adding new items Issue Link: https://github.com/dotnet/maui/issues/28716
+	//KeepLastItemInView Does Not Scroll to Last Item When Adding Items at Top, Instead Scrolls to SecondLast Item : https://github.com/dotnet/maui/issues/29207
 
 	[Test]
 	[Category(UITestCategories.CollectionView)]
@@ -580,7 +581,7 @@ public class CollectionView_ScrollingFeatureTests : UITest
 		App.WaitForElement("Cabbage");
 	}
 
-#if TEST_FAILS_ON_ANDROID 
+#if TEST_FAILS_ON_ANDROID
 //[Android] ArgumentOutOfRangeException Occurs with KeepLastItemInView for Grouped List Issue Link: https://github.com/dotnet/maui/issues/29153
 	[Test]
 	[Category(UITestCategories.CollectionView)]
@@ -666,7 +667,7 @@ public class CollectionView_ScrollingFeatureTests : UITest
 #endif
 #endif
 
-#if TEST_FAILS_ON_ANDROID 
+#if TEST_FAILS_ON_ANDROID
 //[Android] KeepScrollOffset doesn't not works as expected when new items are added in CollectionView Issue Link:  https://github.com/dotnet/maui/issues/29131
 	[Test]
 	[Category(UITestCategories.CollectionView)]

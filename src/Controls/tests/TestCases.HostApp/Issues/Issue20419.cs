@@ -1,4 +1,4 @@
-﻿namespace Controls.TestCases.HostApp.Issues;
+﻿namespace Maui.Controls.Sample.Issues;
 
 [Issue(IssueTracker.Github, 20419, "Argument Exception raised when the GetStringSize method of ICanvas called with default font", PlatformAffected.UWP)]
 public class Issue20419 : ContentPage
@@ -35,6 +35,6 @@ public class MyDrawable : IDrawable
 	{
 		Microsoft.Maui.Graphics.Font font = new Microsoft.Maui.Graphics.Font();
 		var stringSize = canvas.GetStringSize("MyString", font, 32);
-		canvas.DrawString($"String Width: { stringSize.Width}, String Height: {stringSize.Height}", dirtyRect.Left + dirtyRect.Width / 2, dirtyRect.Top + dirtyRect.Height / 2, HorizontalAlignment.Center);
+		canvas.DrawString($"String Width: {stringSize.Width}, String Height: {stringSize.Height}", dirtyRect.Left + dirtyRect.Width / 2, dirtyRect.Top + dirtyRect.Height / 2, HorizontalAlignment.Center);
 	}
 }

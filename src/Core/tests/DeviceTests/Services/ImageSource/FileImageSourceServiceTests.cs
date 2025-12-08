@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Threading.Tasks;
 using Microsoft.Maui.ApplicationModel;
 using Microsoft.Maui.DeviceTests.Stubs;
@@ -14,7 +15,7 @@ namespace Microsoft.Maui.DeviceTests
 		[InlineData(typeof(FontImageSourceStub))]
 		[InlineData(typeof(StreamImageSourceStub))]
 		[InlineData(typeof(UriImageSourceStub))]
-		public async Task ThrowsForIncorrectTypes(Type type)
+		public async Task ThrowsForIncorrectTypes([DynamicallyAccessedMembers(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] Type type)
 		{
 			var service = new FileImageSourceService();
 
@@ -33,18 +34,18 @@ namespace Microsoft.Maui.DeviceTests
 			await MainThread.InvokeOnMainThreadAsync(async () =>
 		   {
 #endif
-			var expectedColor = Color.FromArgb(colorHex);
+			   var expectedColor = Color.FromArgb(colorHex);
 
-			var service = new FileImageSourceService();
+			   var service = new FileImageSourceService();
 
-			var imageSource = new FileImageSourceStub(filename);
+			   var imageSource = new FileImageSourceStub(filename);
 
-			using var result = await service.GetImageAsync(imageSource);
-			var image = result.Value;
+			   using var result = await service.GetImageAsync(imageSource);
+			   var image = result.Value;
 
-			image.AssertColorAtCenter(expectedColor.ToPlatform());
+			   image.AssertColorAtCenter(expectedColor.ToPlatform());
 #if IOS || MACCATALYST
-		});
+		   });
 #endif
 		}
 
@@ -58,19 +59,19 @@ namespace Microsoft.Maui.DeviceTests
 			await MainThread.InvokeOnMainThreadAsync(async () =>
 		   {
 #endif
-			var expectedColor = Color.FromArgb(colorHex);
+			   var expectedColor = Color.FromArgb(colorHex);
 
-			var service = new FileImageSourceService();
+			   var service = new FileImageSourceService();
 
-			var filename = CreateBitmapFile(100, 100, expectedColor);
-			var imageSource = new FileImageSourceStub(filename);
+			   var filename = CreateBitmapFile(100, 100, expectedColor);
+			   var imageSource = new FileImageSourceStub(filename);
 
-			using var result = await service.GetImageAsync(imageSource);
-			var image = result.Value;
+			   using var result = await service.GetImageAsync(imageSource);
+			   var image = result.Value;
 
-			image.AssertColorAtCenter(expectedColor.ToPlatform());
+			   image.AssertColorAtCenter(expectedColor.ToPlatform());
 #if IOS || MACCATALYST
-		});
+		   });
 #endif
 
 		}
@@ -85,19 +86,19 @@ namespace Microsoft.Maui.DeviceTests
 			await MainThread.InvokeOnMainThreadAsync(async () =>
 		   {
 #endif
-			var expectedColor = Color.FromArgb(colorHex);
+			   var expectedColor = Color.FromArgb(colorHex);
 
-			var service = new FileImageSourceService();
+			   var service = new FileImageSourceService();
 
-			var filename = CreateBitmapFile(100, 100, expectedColor, "blue.png");
-			var imageSource = new FileImageSourceStub(filename);
+			   var filename = CreateBitmapFile(100, 100, expectedColor, "blue.png");
+			   var imageSource = new FileImageSourceStub(filename);
 
-			using var result = await service.GetImageAsync(imageSource);
-			var image = result.Value;
+			   using var result = await service.GetImageAsync(imageSource);
+			   var image = result.Value;
 
-			image.AssertColorAtCenter(expectedColor.ToPlatform());
+			   image.AssertColorAtCenter(expectedColor.ToPlatform());
 #if IOS || MACCATALYST
-		});
+		   });
 #endif
 		}
 #endif
