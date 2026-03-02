@@ -1,1 +1,56 @@
-#nullable enable
+﻿#nullable enable
+Microsoft.Maui.Controls.AccessModifier
+Microsoft.Maui.Controls.AccessModifier.Internal = 1 -> Microsoft.Maui.Controls.AccessModifier
+Microsoft.Maui.Controls.AccessModifier.None = 6 -> Microsoft.Maui.Controls.AccessModifier
+Microsoft.Maui.Controls.AccessModifier.Private = 5 -> Microsoft.Maui.Controls.AccessModifier
+Microsoft.Maui.Controls.AccessModifier.PrivateProtected = 4 -> Microsoft.Maui.Controls.AccessModifier
+Microsoft.Maui.Controls.AccessModifier.Protected = 3 -> Microsoft.Maui.Controls.AccessModifier
+Microsoft.Maui.Controls.AccessModifier.ProtectedInternal = 2 -> Microsoft.Maui.Controls.AccessModifier
+Microsoft.Maui.Controls.AccessModifier.Public = 0 -> Microsoft.Maui.Controls.AccessModifier
+Microsoft.Maui.Controls.AttachedBindablePropertyAttribute<T>
+Microsoft.Maui.Controls.AttachedBindablePropertyAttribute<T>.AttachedBindablePropertyAttribute(string! propertyName) -> void
+Microsoft.Maui.Controls.AttachedBindablePropertyAttribute<T>.BindablePropertyAccessibility.get -> Microsoft.Maui.Controls.AccessModifier
+Microsoft.Maui.Controls.AttachedBindablePropertyAttribute<T>.BindablePropertyAccessibility.init -> void
+Microsoft.Maui.Controls.AttachedBindablePropertyAttribute<T>.BindablePropertyXmlDocumentation.get -> string?
+Microsoft.Maui.Controls.AttachedBindablePropertyAttribute<T>.BindablePropertyXmlDocumentation.init -> void
+Microsoft.Maui.Controls.AttachedBindablePropertyAttribute<T>.CoerceValueMethodName.get -> string?
+Microsoft.Maui.Controls.AttachedBindablePropertyAttribute<T>.CoerceValueMethodName.init -> void
+Microsoft.Maui.Controls.AttachedBindablePropertyAttribute<T>.DefaultBindingMode.get -> Microsoft.Maui.Controls.BindingMode
+Microsoft.Maui.Controls.AttachedBindablePropertyAttribute<T>.DefaultBindingMode.init -> void
+Microsoft.Maui.Controls.AttachedBindablePropertyAttribute<T>.DefaultValue.get -> T?
+Microsoft.Maui.Controls.AttachedBindablePropertyAttribute<T>.DefaultValue.init -> void
+Microsoft.Maui.Controls.AttachedBindablePropertyAttribute<T>.DefaultValueCreatorMethodName.get -> string?
+Microsoft.Maui.Controls.AttachedBindablePropertyAttribute<T>.DefaultValueCreatorMethodName.init -> void
+Microsoft.Maui.Controls.AttachedBindablePropertyAttribute<T>.GetterAccessibility.get -> Microsoft.Maui.Controls.AccessModifier
+Microsoft.Maui.Controls.AttachedBindablePropertyAttribute<T>.GetterAccessibility.init -> void
+Microsoft.Maui.Controls.AttachedBindablePropertyAttribute<T>.GetterMethodXmlDocumentation.get -> string?
+Microsoft.Maui.Controls.AttachedBindablePropertyAttribute<T>.GetterMethodXmlDocumentation.init -> void
+Microsoft.Maui.Controls.AttachedBindablePropertyAttribute<T>.IsNullable.get -> bool
+Microsoft.Maui.Controls.AttachedBindablePropertyAttribute<T>.IsNullable.init -> void
+Microsoft.Maui.Controls.AttachedBindablePropertyAttribute<T>.PropertyChangedMethodName.get -> string?
+Microsoft.Maui.Controls.AttachedBindablePropertyAttribute<T>.PropertyChangedMethodName.init -> void
+Microsoft.Maui.Controls.AttachedBindablePropertyAttribute<T>.PropertyChangingMethodName.get -> string?
+Microsoft.Maui.Controls.AttachedBindablePropertyAttribute<T>.PropertyChangingMethodName.init -> void
+Microsoft.Maui.Controls.AttachedBindablePropertyAttribute<T>.PropertyName.get -> string!
+Microsoft.Maui.Controls.AttachedBindablePropertyAttribute<T>.SetterAccessibility.get -> Microsoft.Maui.Controls.AccessModifier
+Microsoft.Maui.Controls.AttachedBindablePropertyAttribute<T>.SetterAccessibility.init -> void
+Microsoft.Maui.Controls.AttachedBindablePropertyAttribute<T>.SetterMethodXmlDocumentation.get -> string?
+Microsoft.Maui.Controls.AttachedBindablePropertyAttribute<T>.SetterMethodXmlDocumentation.init -> void
+Microsoft.Maui.Controls.AttachedBindablePropertyAttribute<T>.ValidateValueMethodName.get -> string?
+Microsoft.Maui.Controls.AttachedBindablePropertyAttribute<T>.ValidateValueMethodName.init -> void
+Microsoft.Maui.Controls.BindablePropertyAttribute
+Microsoft.Maui.Controls.BindablePropertyAttribute.BindablePropertyAttribute() -> void
+Microsoft.Maui.Controls.BindablePropertyAttribute.CoerceValueMethodName.get -> string?
+Microsoft.Maui.Controls.BindablePropertyAttribute.CoerceValueMethodName.init -> void
+Microsoft.Maui.Controls.BindablePropertyAttribute.DefaultBindingMode.get -> Microsoft.Maui.Controls.BindingMode
+Microsoft.Maui.Controls.BindablePropertyAttribute.DefaultBindingMode.init -> void
+Microsoft.Maui.Controls.BindablePropertyAttribute.DefaultValueCreatorMethodName.get -> string?
+Microsoft.Maui.Controls.BindablePropertyAttribute.DefaultValueCreatorMethodName.init -> void
+Microsoft.Maui.Controls.BindablePropertyAttribute.PropertyChangedMethodName.get -> string?
+Microsoft.Maui.Controls.BindablePropertyAttribute.PropertyChangedMethodName.init -> void
+Microsoft.Maui.Controls.BindablePropertyAttribute.PropertyChangingMethodName.get -> string?
+Microsoft.Maui.Controls.BindablePropertyAttribute.PropertyChangingMethodName.init -> void
+Microsoft.Maui.Controls.BindablePropertyAttribute.ValidateValueMethodName.get -> string?
+Microsoft.Maui.Controls.BindablePropertyAttribute.ValidateValueMethodName.init -> void
+Microsoft.Maui.Controls.BindablePropertyDiagnostic
+const Microsoft.Maui.Controls.BindablePropertyDiagnostic.BindablePropertyAttributeExperimentalDiagnosticId = "MCTEXP001" -> string!
